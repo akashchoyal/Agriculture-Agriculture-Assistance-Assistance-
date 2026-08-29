@@ -16,6 +16,8 @@ export const copy = {
     preferences: "Preferences", notifications: "Notifications", help: "Help & support", about: "About KrishiAI", account: "Account", chooseLanguage: "Choose language", chooseTheme: "Choose theme", cancel: "Cancel", done: "Done",
     required: "Please fill in the required fields", loading: "Preparing your farm dashboard...", retry: "Try again", empty: "No crop scans yet", scanEmpty: "Take a clear photo of a leaf or crop to begin.", signOut: "Sign out",
     recentScans: "Recent scans", noScans: "Your scan history will appear here", deleteScan: "Delete scan", viewScan: "View details", justNow: "Just now",
+    today: "Today", tomorrow: "Tomorrow", rainChance: "rain", feelsHumid: "humidity", weatherError: "Weather unavailable", refresh: "Refresh",
+    mandiPrices: "Mandi prices", mspLabel: "Govt MSP", liveLabel: "Live", perQuintal: "/quintal", mandiIntro: "Reference rates for your state",
   },
   hi: {
     appName: "KrishiAI", tagline: "आपका खेत। और समझदार।", welcome: "सुप्रभात", farmer: "किसान",
@@ -32,6 +34,8 @@ export const copy = {
     preferences: "पसंद", notifications: "नोटिफिकेशन", help: "मदद और सहायता", about: "KrishiAI के बारे में", account: "खाता", chooseLanguage: "भाषा चुनें", chooseTheme: "रूप चुनें", cancel: "रद्द करें", done: "हो गया",
     required: "कृपया जरूरी जानकारी भरें", loading: "आपका खेत तैयार हो रहा है...", retry: "फिर कोशिश करें", empty: "अभी कोई स्कैन नहीं", scanEmpty: "शुरू करने के लिए पत्ती या फसल की साफ फोटो लें।", signOut: "साइन आउट",
     recentScans: "पिछले स्कैन", noScans: "आपकी स्कैन हिस्ट्री यहाँ दिखेगी", deleteScan: "स्कैन हटाएं", viewScan: "विवरण देखें", justNow: "अभी अभी",
+    today: "आज", tomorrow: "कल", rainChance: "बारिश", feelsHumid: "नमी", weatherError: "मौसम की जानकारी नहीं मिली", refresh: "फिर से लोड करें",
+    mandiPrices: "मंडी भाव", mspLabel: "सरकारी MSP", liveLabel: "लाइव", perQuintal: "/क्विंटल", mandiIntro: "आपके राज्य के लिए भाव",
   },
 } as const;
 

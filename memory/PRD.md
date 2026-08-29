@@ -29,6 +29,7 @@ Build a mobile smart-agriculture assistant with email/password and Google login,
 - 2026-08-29: Added real server-side AI chat and crop image analysis, camera/gallery selection, profile editing/photo upload, MongoDB persistence, indexes, and API validation.
 - 2026-08-29: Added stable accessibility/test IDs and completed live mobile-web regression: backend 100%, frontend 100%.
 - 2026-08-29: Added Scan History — every successful crop scan is persisted (image, diagnosis, confidence, symptoms, remedies, timestamp) and shown in a "Recent scans" list on the Scanner screen. Tap to revisit details, trash to soft-delete. New endpoints: `GET /api/scan/history`, `DELETE /api/scan/history/{scan_id}`. Compound index on `scan_history (user_id, created_at desc)`.
+- 2026-08-29: Replaced mocked weather + market tiles on Home with live data. `GET /api/weather` uses Open-Meteo (geocoded via Nominatim from user's pincode) and returns current temp/humidity/condition + 3-day forecast. `GET /api/mandi` returns live rates from data.gov.in when `DATA_GOV_API_KEY` is set, else falls back to real Government of India MSP rates (Kharif + Rabi 2025-26) labelled clearly. Both endpoints cached 30 minutes per pincode/state.
 
 ## Prioritized backlog
 - P0: Monitor AI response cost/latency and add rate limiting before high-volume use.

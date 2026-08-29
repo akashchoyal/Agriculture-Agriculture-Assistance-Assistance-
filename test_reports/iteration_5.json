@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 5 – Live Weather (Open-Meteo) + Mandi (MSP fallback) fully validated. Backend: 10/10 pytest tests pass (auth guard on /api/weather + /api/mandi, weather shape with 3-day forecast, Punjab/Ludhiana defaults for QA pincode 141001, cache correctness, mandi returns source='msp' with 18 commodities all unit='quintal' and market='MSP', regressions on /auth/login, /auth/me, /scan/history, /profile PATCH). Frontend (mobile 390x844): logged in as qa@krishiai.app; Home renders live weather card (weather-temp='36° C', 'पंजाब • Ludhiana', Clear sky · नमी 47%); weather-forecast strip renders 3 day cards with icons and rain percentages (आज / कल / सोम); mandi-list renders 6 MSP rows in Hindi (गेहूं ₹2,425 /क्विंटल, धान Common ₹2,369, धान Grade A ₹2,389, मक्का ₹2,400, बाजरा ₹2,775, ज्वार Hybrid ₹3,699) with market label MSP; mandi-source-badge shows 'सरकारी MSP'. All required testIDs present (home-theme-toggle, home-settings, home-scan, home-chat, home-weather, home-market, home-weather-card, weather-temp, weather-forecast, mandi-list, mandi-source-badge, mandi-item-0..5). Tapping home-weather-card and home-weather / home-market quick actions refetches without navigation errors and mandi-list stays mounted. Regression: Scanner tab renders scanner-camera + scanner-gallery, Chat and Profile tabs open. No React Native red screen; only pre-existing Metro-disconnect console warning.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_weather_mandi.py",
+    "/app/test_reports/pytest/iteration5.xml",
+    "/app/test_reports/ui_iteration5_home.jpeg",
+    "/app/test_reports/ui_iteration5_final.jpeg"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Weather + Mandi endpoints use time-based cache with 30-min TTL keyed by pincode/state; correct expiry semantics (cached[0] > now).",
+    "geocode_pincode() has User-Agent header per Nominatim policy and gracefully falls back to DEFAULT_GEO (Ludhiana/Punjab) on any network/parse failure.",
+    "_fetch_live_mandi returns [] whenever DATA_GOV_API_KEY is unset or upstream errors, ensuring deterministic MSP fallback.",
+    "MSP list has 18 official Rabi/Kharif 2025-26 commodities with per-quintal prices; each item is normalized to include state/date/source/unit/market before serialization.",
+    "HomeScreen uses testIDs consistently, wraps all text in <Text>, handles loading (ActivityIndicator) and error (weather-error) states, and refetches on card / quick-action tap without navigation."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_weather_mandi.py",
+    "/app/test_reports/iteration_5.json",
+    "/app/test_reports/pytest/iteration5.xml"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (all iteration-5 acceptance criteria met)"},
+  "seed_data_creation": "Regression test patches QA profile address to TEST_iter5_address; no other test data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "QA user: qa@krishiai.app / KrishiAI123! (pincode 141001, Punjab). Backend tests at /app/backend/tests/. Weather + mandi endpoints have in-memory 30-min cache keyed by pincode/state; if fresh nominatim call is needed, expect ~1-2s first response. DATA_GOV_API_KEY is unset by design → mandi.source is always 'msp'. AuthScreen uses testIDs auth-email/auth-password/auth-submit (NOT login-email/login-password).",
+  "rca_of_issue": "N/A – all iteration-5 weather + mandi acceptance criteria pass end-to-end."
+}

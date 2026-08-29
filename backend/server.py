@@ -4,9 +4,10 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import time
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Tuple, Dict
 import uuid
 import base64
 import re
@@ -119,6 +120,46 @@ class ScanHistoryItem(BaseModel):
     image_base64: str
     language: str
     created_at: datetime
+
+
+class WeatherDay(BaseModel):
+    date: str
+    max_temp: float
+    min_temp: float
+    condition: str
+    icon: str
+    rain_chance: int
+
+
+class WeatherResponse(BaseModel):
+    location: str
+    state: str
+    current_temp: float
+    current_humidity: int
+    current_condition: str
+    current_icon: str
+    updated_at: datetime
+    forecast: List[WeatherDay]
+
+
+class MandiItem(BaseModel):
+    commodity: str
+    variety: str = ""
+    market: str = ""
+    state: str
+    price_min: Optional[float] = None
+    price_max: Optional[float] = None
+    price_modal: float
+    unit: str = "quintal"
+    date: str
+    source: str  # "live" or "msp"
+
+
+class MandiResponse(BaseModel):
+    state: str
+    source: str  # "live" or "msp"
+    updated_at: datetime
+    items: List[MandiItem]
 
 
 def public_user(document: dict) -> UserPublic:
@@ -358,6 +399,190 @@ async def delete_scan(scan_id: str, authorization: Optional[str] = Header(defaul
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Scan not found")
     return {"ok": True}
+
+
+# ---------------- Weather + Mandi ----------------
+_geo_cache: Dict[str, dict] = {}
+_weather_cache: Dict[str, Tuple[float, dict]] = {}
+_mandi_cache: Dict[str, Tuple[float, dict]] = {}
+DATA_GOV_KEY = os.getenv("DATA_GOV_API_KEY", "").strip()
+
+WMO_MAP = {
+    0: ("Clear sky", "sunny-outline"),
+    1: ("Mainly clear", "partly-sunny-outline"),
+    2: ("Partly cloudy", "partly-sunny-outline"),
+    3: ("Overcast", "cloud-outline"),
+    45: ("Fog", "cloudy-outline"), 48: ("Fog", "cloudy-outline"),
+    51: ("Light drizzle", "rainy-outline"), 53: ("Drizzle", "rainy-outline"), 55: ("Heavy drizzle", "rainy-outline"),
+    61: ("Light rain", "rainy-outline"), 63: ("Rain", "rainy-outline"), 65: ("Heavy rain", "rainy-outline"),
+    71: ("Light snow", "snow-outline"), 73: ("Snow", "snow-outline"), 75: ("Heavy snow", "snow-outline"),
+    80: ("Rain showers", "rainy-outline"), 81: ("Rain showers", "rainy-outline"), 82: ("Heavy showers", "thunderstorm-outline"),
+    95: ("Thunderstorm", "thunderstorm-outline"), 96: ("Thunderstorm", "thunderstorm-outline"), 99: ("Severe thunderstorm", "thunderstorm-outline"),
+}
+
+
+def _wmo(code: int) -> Tuple[str, str]:
+    return WMO_MAP.get(int(code), ("Fair", "partly-sunny-outline"))
+
+
+async def geocode_pincode(pincode: str) -> Optional[dict]:
+    if pincode in _geo_cache:
+        return _geo_cache[pincode]
+    try:
+        async with httpx.AsyncClient(timeout=8, headers={"User-Agent": "KrishiAI/1.0 (support@krishiai.app)"}) as http:
+            response = await http.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"postalcode": pincode, "country": "India", "format": "json", "limit": 1, "addressdetails": 1},
+            )
+    except Exception:
+        return None
+    if response.status_code != 200:
+        return None
+    items = response.json()
+    if not items:
+        return None
+    entry = items[0]
+    address = entry.get("address", {})
+    state = address.get("state") or "India"
+    city = address.get("city") or address.get("town") or address.get("village") or address.get("county") or pincode
+    city = re.sub(r"\s*\(.*?\)\s*", " ", city).replace(" Tahsil", "").replace(" Sub District", "").strip()
+    info = {"lat": float(entry["lat"]), "lon": float(entry["lon"]), "city": city, "state": state}
+    _geo_cache[pincode] = info
+    return info
+
+
+DEFAULT_GEO = {"lat": 30.9034, "lon": 75.8286, "city": "Ludhiana", "state": "Punjab"}
+
+
+@api_router.get("/weather", response_model=WeatherResponse)
+async def weather(authorization: Optional[str] = Header(default=None)):
+    user = await current_user(authorization)
+    pincode = (user.get("pincode") or "").strip() or "141001"
+    now = time.time()
+    cached = _weather_cache.get(pincode)
+    if cached and cached[0] > now:
+        return WeatherResponse(**cached[1])
+    geo = await geocode_pincode(pincode) or DEFAULT_GEO
+    try:
+        async with httpx.AsyncClient(timeout=10) as http:
+            response = await http.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": geo["lat"], "longitude": geo["lon"],
+                    "current": "temperature_2m,relative_humidity_2m,weather_code",
+                    "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+                    "timezone": "auto", "forecast_days": 3,
+                },
+            )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Weather service is temporarily unavailable") from exc
+    if response.status_code != 200:
+        raise HTTPException(status_code=502, detail="Weather service is temporarily unavailable")
+    data = response.json()
+    current = data.get("current", {})
+    daily = data.get("daily", {})
+    cond, icon = _wmo(current.get("weather_code", 1))
+    forecast: List[WeatherDay] = []
+    for index, date_str in enumerate(daily.get("time", [])):
+        code = daily["weather_code"][index]
+        day_cond, day_icon = _wmo(code)
+        forecast.append(WeatherDay(
+            date=date_str,
+            max_temp=float(daily["temperature_2m_max"][index]),
+            min_temp=float(daily["temperature_2m_min"][index]),
+            condition=day_cond, icon=day_icon,
+            rain_chance=int(daily["precipitation_probability_max"][index] or 0),
+        ))
+    payload = {
+        "location": geo["city"], "state": geo["state"],
+        "current_temp": float(current.get("temperature_2m", 0)),
+        "current_humidity": int(current.get("relative_humidity_2m", 0)),
+        "current_condition": cond, "current_icon": icon,
+        "updated_at": datetime.now(timezone.utc),
+        "forecast": [day.model_dump() for day in forecast],
+    }
+    _weather_cache[pincode] = (now + 1800, payload)
+    return WeatherResponse(**payload)
+
+
+# Official Government of India MSP (Minimum Support Price) — Rabi 2025-26 and Kharif 2025-26
+MSP_ITEMS = [
+    {"commodity": "Wheat", "variety": "", "price_modal": 2425.0},
+    {"commodity": "Paddy", "variety": "Common", "price_modal": 2369.0},
+    {"commodity": "Paddy", "variety": "Grade A", "price_modal": 2389.0},
+    {"commodity": "Maize", "variety": "", "price_modal": 2400.0},
+    {"commodity": "Bajra", "variety": "", "price_modal": 2775.0},
+    {"commodity": "Jowar", "variety": "Hybrid", "price_modal": 3699.0},
+    {"commodity": "Ragi", "variety": "", "price_modal": 4886.0},
+    {"commodity": "Cotton", "variety": "Long Staple", "price_modal": 8110.0},
+    {"commodity": "Cotton", "variety": "Medium Staple", "price_modal": 7710.0},
+    {"commodity": "Tur/Arhar", "variety": "", "price_modal": 8000.0},
+    {"commodity": "Moong", "variety": "", "price_modal": 8768.0},
+    {"commodity": "Urad", "variety": "", "price_modal": 7800.0},
+    {"commodity": "Groundnut", "variety": "", "price_modal": 7263.0},
+    {"commodity": "Soyabean", "variety": "", "price_modal": 5328.0},
+    {"commodity": "Sunflower", "variety": "", "price_modal": 7721.0},
+    {"commodity": "Gram", "variety": "", "price_modal": 5650.0},
+    {"commodity": "Masur", "variety": "", "price_modal": 6700.0},
+    {"commodity": "Mustard", "variety": "", "price_modal": 5950.0},
+]
+
+
+async def _fetch_live_mandi(state: str) -> List[dict]:
+    if not DATA_GOV_KEY:
+        return []
+    try:
+        async with httpx.AsyncClient(timeout=10) as http:
+            response = await http.get(
+                "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070",
+                params={"api-key": DATA_GOV_KEY, "format": "json", "limit": 30, "filters[state]": state},
+            )
+    except Exception:
+        return []
+    if response.status_code != 200:
+        return []
+    records = response.json().get("records", []) or []
+    live: List[dict] = []
+    for record in records[:12]:
+        try:
+            modal = float(record.get("modal_price") or 0)
+        except (ValueError, TypeError):
+            continue
+        if not modal:
+            continue
+        live.append({
+            "commodity": record.get("commodity", ""), "variety": record.get("variety", "") or "",
+            "market": record.get("market", "") or "", "state": record.get("state", state),
+            "price_min": float(record.get("min_price") or 0) or None,
+            "price_max": float(record.get("max_price") or 0) or None,
+            "price_modal": modal, "unit": "quintal",
+            "date": record.get("arrival_date") or datetime.now(timezone.utc).date().isoformat(),
+            "source": "live",
+        })
+    return live
+
+
+@api_router.get("/mandi", response_model=MandiResponse)
+async def mandi(authorization: Optional[str] = Header(default=None)):
+    user = await current_user(authorization)
+    pincode = (user.get("pincode") or "").strip() or "141001"
+    geo = _geo_cache.get(pincode) or await geocode_pincode(pincode) or DEFAULT_GEO
+    state = geo["state"]
+    now = time.time()
+    cache_key = f"state:{state}"
+    cached = _mandi_cache.get(cache_key)
+    if cached and cached[0] > now:
+        return MandiResponse(**cached[1])
+    live_items = await _fetch_live_mandi(state)
+    if live_items:
+        payload = {"state": state, "source": "live", "updated_at": datetime.now(timezone.utc), "items": live_items}
+    else:
+        today = datetime.now(timezone.utc).date().isoformat()
+        items = [{**item, "state": state, "date": today, "source": "msp", "unit": "quintal", "market": "MSP"} for item in MSP_ITEMS]
+        payload = {"state": state, "source": "msp", "updated_at": datetime.now(timezone.utc), "items": items}
+    _mandi_cache[cache_key] = (now + 1800, payload)
+    return MandiResponse(**payload)
+
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):

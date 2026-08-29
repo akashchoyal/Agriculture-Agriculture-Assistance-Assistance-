@@ -102,11 +102,23 @@ class ScanRequest(BaseModel):
 
 
 class ScanResponse(BaseModel):
+    scan_id: str
     diagnosis: str
     confidence: str
     symptoms: List[str]
     remedies: List[str]
     language: str
+
+
+class ScanHistoryItem(BaseModel):
+    scan_id: str
+    diagnosis: str
+    confidence: str
+    symptoms: List[str]
+    remedies: List[str]
+    image_base64: str
+    language: str
+    created_at: datetime
 
 
 def public_user(document: dict) -> UserPublic:
@@ -315,7 +327,37 @@ async def scan(input: ScanRequest, authorization: Optional[str] = Header(default
     confidence = " ".join(sections.get("confidence", "Needs review").split())[:80]
     symptoms = [re.sub(r"^[-•\d.) ]+", "", line).strip() for line in sections.get("symptoms", "").splitlines() if re.sub(r"^[-•\d.) ]+", "", line).strip()][:3] or ["Photo requires a closer field inspection"]
     remedies = [re.sub(r"^[-•\d.) ]+", "", line).strip() for line in sections.get("remedies", "").splitlines() if re.sub(r"^[-•\d.) ]+", "", line).strip()][:3] or ["Remove visibly affected leaves", "Avoid overhead watering", "Consult a local agronomist"]
-    return ScanResponse(diagnosis=diagnosis, confidence=confidence, symptoms=symptoms, remedies=remedies, language=input.language)
+    scan_id = f"scan_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    stored_image = input.image_base64 if input.image_base64.startswith("data:image/") else f"data:{input.mime_type};base64,{raw}"
+    await db.scan_history.insert_one({
+        "scan_id": scan_id, "user_id": user["user_id"], "diagnosis": diagnosis, "confidence": confidence,
+        "symptoms": symptoms, "remedies": remedies, "image_base64": stored_image, "language": input.language,
+        "created_at": now, "deleted_at": None,
+    })
+    return ScanResponse(scan_id=scan_id, diagnosis=diagnosis, confidence=confidence, symptoms=symptoms, remedies=remedies, language=input.language)
+
+
+@api_router.get("/scan/history", response_model=List[ScanHistoryItem])
+async def scan_history(authorization: Optional[str] = Header(default=None)):
+    user = await current_user(authorization)
+    cursor = db.scan_history.find(
+        {"user_id": user["user_id"], "deleted_at": None},
+        {"_id": 0, "user_id": 0, "deleted_at": 0},
+    ).sort("created_at", -1).limit(50)
+    return [ScanHistoryItem(**doc) async for doc in cursor]
+
+
+@api_router.delete("/scan/history/{scan_id}")
+async def delete_scan(scan_id: str, authorization: Optional[str] = Header(default=None)):
+    user = await current_user(authorization)
+    result = await db.scan_history.update_one(
+        {"scan_id": scan_id, "user_id": user["user_id"], "deleted_at": None},
+        {"$set": {"deleted_at": datetime.now(timezone.utc)}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    return {"ok": True}
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
@@ -359,3 +401,4 @@ async def create_indexes():
     await db.user_sessions.create_index("session_token", unique=True)
     await db.user_sessions.create_index("user_id")
     await db.user_sessions.create_index("expires_at", expireAfterSeconds=0)
+    await db.scan_history.create_index([("user_id", 1), ("created_at", -1)])

@@ -15,6 +15,7 @@ export const copy = {
     profileTitle: "Your profile", editProfile: "Edit profile", age: "Age", pincode: "Pincode", country: "Country", address: "Farm address", save: "Save changes", saved: "Profile saved", photo: "Profile photo", complete: "Complete your farm profile",
     preferences: "Preferences", notifications: "Notifications", help: "Help & support", about: "About KrishiAI", account: "Account", chooseLanguage: "Choose language", chooseTheme: "Choose theme", cancel: "Cancel", done: "Done",
     required: "Please fill in the required fields", loading: "Preparing your farm dashboard...", retry: "Try again", empty: "No crop scans yet", scanEmpty: "Take a clear photo of a leaf or crop to begin.", signOut: "Sign out",
+    recentScans: "Recent scans", noScans: "Your scan history will appear here", deleteScan: "Delete scan", viewScan: "View details", justNow: "Just now",
   },
   hi: {
     appName: "KrishiAI", tagline: "आपका खेत। और समझदार।", welcome: "सुप्रभात", farmer: "किसान",
@@ -30,6 +31,7 @@ export const copy = {
     profileTitle: "आपकी प्रोफ़ाइल", editProfile: "प्रोफ़ाइल बदलें", age: "उम्र", pincode: "पिन कोड", country: "देश", address: "खेत का पता", save: "बदलाव सहेजें", saved: "प्रोफ़ाइल सेव हो गई", photo: "प्रोफ़ाइल फोटो", complete: "अपनी कृषि प्रोफ़ाइल पूरी करें",
     preferences: "पसंद", notifications: "नोटिफिकेशन", help: "मदद और सहायता", about: "KrishiAI के बारे में", account: "खाता", chooseLanguage: "भाषा चुनें", chooseTheme: "रूप चुनें", cancel: "रद्द करें", done: "हो गया",
     required: "कृपया जरूरी जानकारी भरें", loading: "आपका खेत तैयार हो रहा है...", retry: "फिर कोशिश करें", empty: "अभी कोई स्कैन नहीं", scanEmpty: "शुरू करने के लिए पत्ती या फसल की साफ फोटो लें।", signOut: "साइन आउट",
+    recentScans: "पिछले स्कैन", noScans: "आपकी स्कैन हिस्ट्री यहाँ दिखेगी", deleteScan: "स्कैन हटाएं", viewScan: "विवरण देखें", justNow: "अभी अभी",
   },
 } as const;
 

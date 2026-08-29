@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 4 – Scan History feature end-to-end validated. Backend: 11/11 pytest tests pass (auth guard, scan persistence with scan_id, GET history newest-first excluding _id/user_id, soft-delete happy path, 404 for missing / already-deleted / other-user scans, compound index user_id:1 + created_at:-1 present, regression: /auth/me, /profile, /preferences, /auth/logout). Frontend (Expo web preview, mobile viewport 390x844): logged in as QA account, navigated to Scanner, verified the 'पिछले स्कैन' (Recent scans) list renders seeded history cards with thumbnail + diagnosis + timestamp + top remedy, tapping a history card opens scanner-result with stored image and remedies, trash button removes item optimistically (count 2→1) and the deletion persists after tab-switch refresh, scanner-camera and scanner-gallery buttons render. No React Native red screen. All required testIDs present.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Image", "issue": "Console warning: 'Image: style.resizeMode is deprecated. Please use props.resizeMode.' – styles.image sets resizeMode via StyleSheet at ScannerScreen.tsx:233. Non-blocking, but should migrate to prop for React Native 0.79+."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_scan_history.py",
+    "/app/backend/tests/test_iteration2.py",
+    "/app/test_reports/pytest/iteration4.xml",
+    "/app/test_reports/ui_iteration4/"
+  ],
+  "action_items": [
+    "Optional: move `resizeMode: 'cover'` from StyleSheet into the Image prop on ScannerScreen.tsx to silence RN deprecation warning."
+  ],
+  "critical_code_review_comments": [
+    "Backend excludes _id and user_id from GET /scan/history payload correctly.",
+    "Soft-delete uses update_one with matched_count check – returns 404 for non-owner and already-deleted cases as intended.",
+    "Compound index (user_id asc, created_at desc) created on startup as required.",
+    "ScannerScreen uses testIDs consistently and reloads history after a successful scan via loadHistory()."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_scan_history.py",
+    "/app/test_reports/iteration_4.json",
+    "/app/test_reports/pytest/iteration4.xml"
+  ],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% (all scan-history acceptance criteria met)"},
+  "seed_data_creation": "Temporarily inserted 2 TEST_UI_ scan_history rows for the QA user to drive the UI test; cleaned up after the run. Ephemeral TEST_other_* signup rows and their scans were also created/cleaned inside the pytest 'other user' test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "QA user is qa@krishiai.app / KrishiAI123!. Real crop-like JPEG stored at /tmp/leaf.jpg is required for /api/ai/scan; tiny/blank images are rejected by upstream OpenAI. Backend tests live in /app/backend/tests/. Compound index expected on scan_history collection.",
+  "rca_of_issue": "N/A – all Scan History acceptance criteria pass."
+}

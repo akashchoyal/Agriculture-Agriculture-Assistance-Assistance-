@@ -1,49 +1,79 @@
 {
-  "project_type": "Expo React Native Mobile App",
-  "theme": "Cinematic Earth (Organic & Earthy Archetype)",
-  "colors": {
-    "background": "#0A1F16",
-    "surface": "#132E22",
-    "primary": "#F4F1E1",
-    "accent": "#B6D084",
-    "text_primary": "#F4F1E1",
-    "text_secondary": "#8B9E90"
-  },
   "typography": {
-    "brand_name": {
-      "font": "Cabinet Grotesk or similar Wide Geometric Sans",
-      "weight": "800",
-      "tracking": "tracking-tight"
+    "primary_font": "System default sans-serif (San Francisco for iOS, Roboto for Android) to ensure maximum native legibility at small sizes.",
+    "key_text": "text-xl font-medium tracking-tight",
+    "action_text": "text-sm font-semibold uppercase tracking-[0.1em]",
+    "hindi_text": "text-2xl font-normal leading-none"
+  },
+  "colors": {
+    "light_theme": {
+      "background": "#ECEFF1",
+      "key_bg": "#FFFFFF",
+      "key_text": "#1A1A1A",
+      "special_key_bg": "#CFD8DC",
+      "special_key_text": "#374151",
+      "accent_primary": "#4F46E5",
+      "accent_text": "#FFFFFF",
+      "border": "#B0BEC5",
+      "key_shadow": "#D1D5DB"
     },
-    "owner_name": {
-      "font": "Playfair Display, Cormorant Garamond, or similar elegant Serif",
-      "weight": "400",
-      "style": "italic",
-      "tracking": "tracking-[0.2em]"
+    "dark_theme": {
+      "background": "#0F172A",
+      "key_bg": "#1E293B",
+      "key_text": "#F8FAFC",
+      "special_key_bg": "#334155",
+      "special_key_text": "#CBD5E1",
+      "accent_primary": "#6366F1",
+      "accent_text": "#FFFFFF",
+      "border": "#0F172A",
+      "key_shadow": "#020617"
     }
+  },
+  "visual_enhancers": {
+    "key_shape": "Square-like geometry. borderRadius: 6px for a modern, tactile feel.",
+    "key_depth": "Neumorphic tactile approach: Flat background with 1px solid bottom border/shadow matching the 'key_shadow' color to give physical depth.",
+    "active_state": "Scale down transform (0.95) and slight background darkening on press.",
+    "glassmorphism": "Use for the Settings Modal overlay: backdrop-blur-xl with bg-black/60 (Dark) or bg-white/70 (Light). NEVER fully transparent."
+  },
+  "components": {
+    "KeyboardContainer": "Absolute positioned view pinned to the bottom. Safe area aware.",
+    "KeyBase": "Pressable component with unified interaction logic (onPressIn, onPressOut).",
+    "SettingsModal": "Bottom sheet or modal displaying keyboard configurations.",
+    "LanguageToggle": "Dedicated globe icon key replacing the traditional comma/emoji key area for quick EN/HI switching.",
+    "EmojiPanel": "Horizontal scroll view or grid view of standard emojis available when toggled.",
+    "NumberRow": "Optional top row of numbers enabled via settings."
   },
   "layouts": {
-    "splash_screen": "Flex-1, absolute centering for main brand, bottom-anchored alignment for the owner name. Avoid center-everything disease: balance the heavy center logo with a delicate, wide-spaced owner name at the bottom, padded by 48px from the bottom safe area."
+    "keyboard_rows": "Flexbox row layouts with 'justifyContent: center'.",
+    "row_staggering": "Middle and bottom rows must have dynamic horizontal padding to mimic physical QWERTY staggering.",
+    "key_spacing": "Strict 6px gap between keys horizontally and vertically.",
+    "touch_targets": "Minimum touch target height of 48px for all keys."
   },
   "motion": {
-    "entry": "1200ms ease-out fade in for background and logo.",
-    "stagger": "Owner name 'Akash Choyal' fades in 400ms AFTER the logo, with a subtle upward translation (e.g., +10px to 0px)."
-  },
-  "component_instructions": {
-    "SplashScreen": {
-      "description": "The initial launch screen bridging the native splash to the JS thread.",
-      "structure": "View (Container) -> View (Center: Logo/Brand) -> View (Bottom: 'From' or 'Founder' label + Owner Name)",
-      "styling": "Background color #0A1F16. The exact name 'Akash Choyal' MUST be explicitly displayed at the bottom."
-    }
+    "key_press": "Use React Native Animated API for a snappy spring animation (scale down to 0.95 on press-in, back to 1 on press-out).",
+    "haptics": "Integrate 'expo-haptics'. Trigger ImpactFeedbackStyle.Light on key press.",
+    "panel_transition": "Slide up animation when switching from Letters to Emoji panel or opening Settings."
   },
   "accessibility": {
-    "guidelines": "Ensure the owner name has sufficient contrast against the deep green background (APCA/WCAG compliant).",
-    "test_ids": {
-      "container": "splash-screen-container",
-      "logo": "brand-logo",
-      "owner_name": "owner-name-display"
+    "test_ids": "Every key MUST have a data-testid (e.g., data-testid='key-a', data-testid='key-backspace').",
+    "aria_labels": "Keys should have accessibilityLabel with the character or action name.",
+    "screen_reader": "State changes (Language switched to Hindi) should be announced via Accessibility API."
+  },
+  "media": {
+    "icons": {
+      "library": "@expo/vector-icons (Feather or Ionicons)",
+      "usage": "Backspace (delete), Shift (arrow-up), Settings (settings), Language (globe), Emoji (smile), Enter (return-down-back)"
     }
   },
-  "UNIVERSAL GUIDELINES FOR MAIN AGENT": "You tend to converge toward generic outputs. Avoid this. Make the splash screen feel like a cinematic opening scene. Use 2-3x more spacing than feels comfortable. DO NOT use generic centered layouts without establishing vertical tension. Always include `data-testid` on all key elements. DO NOT modify files unless creating the splash screen as instructed. This is a React Native Expo environment, so translate these design concepts into StyleSheet or NativeWind classes appropriately.",
-  "instructions_to_main_agent": "Create a custom Splash Screen component in the React Native Expo app. The screen must display the KrishiAI branding and prominently feature the exact name 'Akash Choyal' near the bottom, signifying ownership/founder. Implement a brief delay/animation before navigating to the authentication or main app, preserving session restoration logic."
+  "instructions_to_main_agent": [
+    "Context: This is an Expo React Native mobile app using .js files.",
+    "To use this custom keyboard, you MUST suppress the system keyboard. Set 'showSoftInputOnFocus={false}' on the target TextInputs.",
+    "Create a global Context or Zustand store to hold the active input reference, current cursor position, and keyboard settings.",
+    "Keyboard Settings Store should include: isHindi (boolean), soundEnabled (boolean), hapticsEnabled (boolean), showNumberRow (boolean), theme (system/light/dark).",
+    "Build the QWERTY layout as arrays of strings. Build the Hindi layout mapping corresponding consonants and vowels (Varnamala) across tabs or a shifted layout.",
+    "Implement a Custom Key component that intercepts 'onPressIn' to fire 'expo-haptics' and play a system sound if settings permit, then updates the text.",
+    "For the Settings Modal, use a Modal component with a blurred dark overlay. Include Switches for Emoji Panel, Sound, Haptics, and Theme.",
+    "Ensure the keyboard dynamically calculates key width based on screen dimension divided by 10 (for the top row) minus margins."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": "You tend to converge toward generic outputs. Avoid this: make creative, distinctive frontends that surprise and delight. Create depth through layered design elements (1px borders, subtle drop shadows). Use glass-morphism effects for overlays with proper blur and semi-transparent backgrounds—NEVER use completely transparent backgrounds over content. Use modern shapes (rounded squares for keys). Every interaction needs micro-animations (scale on press). Ensure UI meets APCA contrast standards. ALL interactive elements MUST include data-testid. DO NOT use emojis for icons, use vector icons. Do not use generic centered layouts for the main app UI; align elements logically."
 }

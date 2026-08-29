@@ -1,0 +1,78 @@
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useApp } from "@/src/context/AppContext";
+import { type KeyboardSettings, useKeyboard } from "@/src/keyboard/KeyboardContext";
+
+const EN_ROWS = [["q","w","e","r","t","y","u","i","o","p"], ["a","s","d","f","g","h","j","k","l"], ["z","x","c","v","b","n","m"]];
+const HI_ROWS = [["अ","आ","इ","ई","उ","ऊ","ए","ऐ","ओ","औ"], ["क","ख","ग","घ","च","छ","ज","झ","ञ"], ["ट","ठ","ड","ढ","ण","त","थ","द","ध"], ["न","प","फ","ब","भ","म","य","र","ल"], ["व","श","ष","स","ह","क्ष","त्र","ज्ञ"]];
+const MATRA_ROWS = [["ा","ि","ी","ु","ू","ृ","े","ै","ो","ौ"], ["ं","ँ","ः","्","़","ऽ","।","॥"], ["क़","ख़","ग़","ज़","ड़","ढ़","फ़"]];
+const NUMBER_ROWS = [["1","2","3","4","5","6","7","8","9","0"], ["@","#","₹","_","&","-","+","(",")","/"], ["*","\"","'",";",":","!","?","%","=","."]];
+const EMOJIS = ["😀","😃","😊","😍","🥰","😂","🙂","😉","😎","🤝","🙏","👍","👏","💪","❤️","🎉","🌱","🌾","🌻","🍀","🥭","🍅","🥕","🌽","☀️","🌧️","💧","🔥","✅","⭐","📍","💬"];
+const THEMES = { light: { bg: "#E7ECE8", key: "#FFFFFF", special: "#CED8D1", text: "#17221C", muted: "#52635A", accent: "#4F6F52", border: "#B9C7BD", shadow: "#AAB8AE" }, dark: { bg: "#17231D", key: "#26362D", special: "#35483D", text: "#F5F7F3", muted: "#B4C2B8", accent: "#9DBB9A", border: "#405349", shadow: "#0B120E" } };
+type Panel = "letters" | "numbers" | "emoji";
+type Colors = typeof THEMES.light;
+
+export default function CustomKeyboard() {
+  const { theme: appTheme } = useApp(); const kb = useKeyboard(); const insets = useSafeAreaInsets();
+  const [panel, setPanel] = useState<Panel>("letters"); const [shift, setShift] = useState(false); const [hindiAlt, setHindiAlt] = useState(false);
+  const theme = kb.settings.theme === "system" ? appTheme : kb.settings.theme; const c = THEMES[theme]; const keyHeight = kb.settings.keySize === "small" ? 44 : kb.settings.keySize === "large" ? 54 : 48;
+  useEffect(() => { setPanel(kb.activeMode === "number" ? "numbers" : "letters"); }, [kb.activeMode]);
+  useEffect(() => { if (!kb.settings.emoji && panel === "emoji") setPanel("letters"); }, [kb.settings.emoji, panel]);
+  const switchLanguage = () => { const next = kb.settings.language === "en" ? "hi" : "en"; kb.setLanguage(next); setPanel("letters"); setHindiAlt(false); void AccessibilityInfo.announceForAccessibility(next === "hi" ? "हिंदी कीबोर्ड" : "English keyboard"); };
+  const type = (letter: string) => { kb.insert(kb.settings.language === "en" && shift ? letter.toUpperCase() : letter); if (shift) setShift(false); };
+  const letterRows = kb.settings.language === "en" ? EN_ROWS : hindiAlt ? MATRA_ROWS : HI_ROWS;
+  return <>
+    <KeyboardSettingsModal c={c} />
+    {kb.visible && <View testID="custom-keyboard" style={[styles.keyboard, { backgroundColor: c.bg, borderColor: c.border, paddingBottom: Math.max(insets.bottom, 6) }]}>
+      <View testID="keyboard-toolbar" style={styles.toolbar}>
+        <Pressable testID="keyboard-settings-button" accessibilityLabel="Keyboard settings" onPress={kb.openSettings} style={styles.toolbarButton}><Ionicons name="settings-outline" size={20} color={c.muted} /></Pressable>
+        <View testID="keyboard-language-status" style={[styles.languagePill, { backgroundColor: c.special }]}><Ionicons name="language-outline" size={15} color={c.accent} /><Text style={[styles.languageText, { color: c.text }]}>{kb.settings.language === "hi" ? hindiAlt ? "हिंदी · मात्राएँ" : "हिंदी · वर्णमाला" : "English · QWERTY"}</Text></View>
+        <Pressable testID="keyboard-close-button" accessibilityLabel="Close keyboard" onPress={kb.close} style={styles.toolbarButton}><Ionicons name="chevron-down" size={23} color={c.muted} /></Pressable>
+      </View>
+      {panel === "emoji" ? <EmojiPanel c={c} height={keyHeight} onPick={kb.insert} /> : <>
+        {panel === "letters" && kb.settings.numberRow && <KeyRow values={NUMBER_ROWS[0]} prefix="number-row" c={c} height={keyHeight} onPress={kb.insert} feedback={kb.feedback} />}
+        {panel === "numbers" ? NUMBER_ROWS.map((row, index) => <KeyRow key={`symbols-${index}`} values={row} prefix={`symbols-${index}`} c={c} height={keyHeight} onPress={kb.insert} feedback={kb.feedback} />) : letterRows.map((row, index) => {
+          if (kb.settings.language === "en" && index === 2) return <View key="letters-2" style={styles.row}><KeyboardKey testID="keyboard-shift" icon="arrow-up" active={shift} special c={c} height={keyHeight} onPress={() => setShift((old) => !old)} feedback={kb.feedback} />{row.map((key, keyIndex) => <KeyboardKey key={key} testID={`keyboard-letter-2-${keyIndex}`} label={shift ? key.toUpperCase() : key} c={c} height={keyHeight} onPress={() => type(key)} feedback={kb.feedback} />)}<KeyboardKey testID="keyboard-backspace-inline" icon="backspace-outline" special c={c} height={keyHeight} onPress={kb.backspace} feedback={kb.feedback} /></View>;
+          return <KeyRow key={`letters-${index}`} values={row} prefix={`letters-${index}`} c={c} height={keyHeight} onPress={type} feedback={kb.feedback} />;
+        })}
+        {panel === "letters" && kb.activeMode === "email" && <KeyRow values={["@",".",".com","_"]} prefix="email-shortcut" c={c} height={keyHeight} onPress={kb.insert} feedback={kb.feedback} />}
+      </>}
+      <View style={styles.row}>
+        <KeyboardKey testID="keyboard-panel-toggle" label={panel === "numbers" ? "ABC" : "?123"} special c={c} height={keyHeight} onPress={() => setPanel(panel === "numbers" ? "letters" : "numbers")} feedback={kb.feedback} />
+        <KeyboardKey testID="keyboard-language-toggle" icon="globe-outline" special c={c} height={keyHeight} onPress={switchLanguage} feedback={kb.feedback} />
+        {kb.settings.language === "hi" && panel === "letters" && <KeyboardKey testID="keyboard-hindi-page-toggle" label={hindiAlt ? "अक्षर" : "मात्रा"} special wide={1.25} c={c} height={keyHeight} onPress={() => setHindiAlt((old) => !old)} feedback={kb.feedback} />}
+        {kb.settings.emoji && <KeyboardKey testID="keyboard-emoji-toggle" icon={panel === "emoji" ? "text-outline" : "happy-outline"} special c={c} height={keyHeight} onPress={() => setPanel(panel === "emoji" ? "letters" : "emoji")} feedback={kb.feedback} />}
+        <KeyboardKey testID="keyboard-space" label={kb.settings.language === "hi" ? "हिंदी" : "English"} wide={3.4} c={c} height={keyHeight} onPress={() => kb.insert(" ")} feedback={kb.feedback} />
+        {!(kb.settings.language === "en" && panel === "letters") && <KeyboardKey testID="keyboard-backspace" icon="backspace-outline" special c={c} height={keyHeight} onPress={kb.backspace} feedback={kb.feedback} />}
+        <KeyboardKey testID="keyboard-enter" icon="return-down-back" accent c={c} height={keyHeight} onPress={kb.enter} feedback={kb.feedback} />
+      </View>
+    </View>}
+  </>;
+}
+
+function KeyRow({ values, prefix, c, height, onPress, feedback }: { values: string[]; prefix: string; c: Colors; height: number; onPress: (value: string) => void; feedback: () => void }) { return <View style={styles.row}>{values.map((value, index) => <KeyboardKey key={`${value}-${index}`} testID={`keyboard-${prefix}-${index}`} label={value} c={c} height={height} onPress={() => onPress(value)} feedback={feedback} />)}</View>; }
+
+function KeyboardKey({ testID, label, icon, c, height, onPress, feedback, special, accent, active, wide = 1 }: { testID: string; label?: string; icon?: keyof typeof Ionicons.glyphMap; c: Colors; height: number; onPress: () => void; feedback: () => void; special?: boolean; accent?: boolean; active?: boolean; wide?: number }) {
+  const scale = useRef(new Animated.Value(1)).current; const bg = accent ? c.accent : special || active ? c.special : c.key; const color = accent ? "#fff" : c.text;
+  return <Animated.View style={{ flex: wide, transform: [{ scale }] }}><Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label || testID.replaceAll("-", " ")} onPressIn={() => { feedback(); Animated.spring(scale, { toValue: .94, useNativeDriver: Platform.OS !== "web", speed: 35 }).start(); }} onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: Platform.OS !== "web", speed: 35 }).start()} onPress={onPress} style={[styles.key, { height, backgroundColor: bg, borderColor: c.shadow }]}>{icon ? <Ionicons name={icon} size={21} color={color} /> : <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.keyText, { color }, label && /[\u0900-\u097F]/.test(label) && styles.hindiKey]}>{label}</Text>}</Pressable></Animated.View>;
+}
+
+function EmojiPanel({ c, height, onPick }: { c: Colors; height: number; onPick: (emoji: string) => void }) { const { feedback } = useKeyboard(); const rows = Array.from({ length: 4 }, (_, index) => EMOJIS.slice(index * 8, index * 8 + 8)); return <View testID="keyboard-emoji-panel" style={styles.emojiPanel}>{rows.map((row, rowIndex) => <KeyRow key={`emoji-${rowIndex}`} values={row} prefix={`emoji-${rowIndex}`} c={c} height={height} onPress={onPick} feedback={feedback} />)}</View>; }
+
+function KeyboardSettingsModal({ c }: { c: Colors }) {
+  const kb = useKeyboard(); const hi = kb.settings.language === "hi";
+  return <Modal testID="keyboard-settings-modal" visible={kb.settingsOpen} transparent animationType="slide" onRequestClose={kb.closeSettings}><View style={styles.modalRoot}><Pressable testID="keyboard-settings-backdrop" accessibilityLabel="Close keyboard settings" style={StyleSheet.absoluteFill} onPress={kb.closeSettings} /><View style={[styles.sheet, { backgroundColor: c.bg, borderColor: c.border }]}><ScrollView contentContainerStyle={styles.sheetContent}>
+    <View style={styles.sheetHeader}><View><Text testID="keyboard-settings-title" style={[styles.sheetTitle, { color: c.text }]}>{hi ? "कीबोर्ड सेटिंग्स" : "Keyboard settings"}</Text><Text style={[styles.sheetSubtitle, { color: c.muted }]}>{hi ? "अपनी टाइपिंग पसंद चुनें" : "Choose your typing preferences"}</Text></View><Pressable testID="keyboard-settings-close" accessibilityLabel="Close settings" onPress={kb.closeSettings} style={[styles.closeButton, { backgroundColor: c.special }]}><Ionicons name="close" size={22} color={c.text} /></Pressable></View>
+    <Text style={[styles.sectionLabel, { color: c.muted }]}>{hi ? "भाषा" : "LANGUAGE"}</Text><Segment options={[{ id: "en", label: "English" }, { id: "hi", label: "हिंदी" }]} selected={kb.settings.language} onSelect={(value) => kb.setLanguage(value as "en" | "hi")} c={c} prefix="keyboard-setting-language" />
+    <Text style={[styles.sectionLabel, { color: c.muted }]}>{hi ? "फीचर्स" : "FEATURES"}</Text><SettingSwitch id="keyboard-setting-sound" icon="volume-medium-outline" title={hi ? "Key sound" : "Key sound"} value={kb.settings.sound} onValueChange={(sound) => kb.updateSettings({ sound })} c={c} /><SettingSwitch id="keyboard-setting-haptics" icon="phone-portrait-outline" title={hi ? "कंपन" : "Key vibration"} value={kb.settings.haptics} onValueChange={(haptics) => kb.updateSettings({ haptics })} c={c} /><SettingSwitch id="keyboard-setting-emoji" icon="happy-outline" title={hi ? "Emoji panel" : "Emoji panel"} value={kb.settings.emoji} onValueChange={(emoji) => kb.updateSettings({ emoji })} c={c} /><SettingSwitch id="keyboard-setting-number-row" icon="keypad-outline" title={hi ? "ऊपर नंबर की पंक्ति" : "Top number row"} value={kb.settings.numberRow} onValueChange={(numberRow) => kb.updateSettings({ numberRow })} c={c} />
+    <Text style={[styles.sectionLabel, { color: c.muted }]}>{hi ? "Key size" : "KEY SIZE"}</Text><Segment options={[{ id: "small", label: hi ? "छोटा" : "Small" }, { id: "medium", label: hi ? "मध्यम" : "Medium" }, { id: "large", label: hi ? "बड़ा" : "Large" }]} selected={kb.settings.keySize} onSelect={(keySize) => kb.updateSettings({ keySize: keySize as KeyboardSettings["keySize"] })} c={c} prefix="keyboard-setting-size" />
+    <Text style={[styles.sectionLabel, { color: c.muted }]}>{hi ? "रूप" : "THEME"}</Text><Segment options={[{ id: "system", label: hi ? "ऐप" : "App" }, { id: "light", label: hi ? "लाइट" : "Light" }, { id: "dark", label: hi ? "डार्क" : "Dark" }]} selected={kb.settings.theme} onSelect={(theme) => kb.updateSettings({ theme: theme as KeyboardSettings["theme"] })} c={c} prefix="keyboard-setting-theme" />
+  </ScrollView></View></View></Modal>;
+}
+
+function SettingSwitch({ id, icon, title, value, onValueChange, c }: { id: string; icon: keyof typeof Ionicons.glyphMap; title: string; value: boolean; onValueChange: (value: boolean) => void; c: Colors }) { return <View style={[styles.settingRow, { backgroundColor: c.key, borderColor: c.border }]}><Ionicons name={icon} size={20} color={c.accent} /><Text style={[styles.settingTitle, { color: c.text }]}>{title}</Text><Switch testID={id} value={value} onValueChange={onValueChange} trackColor={{ false: c.border, true: c.accent }} /></View>; }
+function Segment({ options, selected, onSelect, c, prefix }: { options: { id: string; label: string }[]; selected: string; onSelect: (id: string) => void; c: Colors; prefix: string }) { return <View style={[styles.segment, { backgroundColor: c.special }]}>{options.map((option) => <Pressable key={option.id} testID={`${prefix}-${option.id}`} accessibilityRole="button" accessibilityState={{ selected: option.id === selected }} onPress={() => onSelect(option.id)} style={[styles.segmentButton, option.id === selected && { backgroundColor: c.accent }]}><Text style={[styles.segmentText, { color: option.id === selected ? "#fff" : c.text }]}>{option.label}</Text></Pressable>)}</View>; }
+
+const styles = StyleSheet.create({ keyboard: { borderTopWidth: 1, paddingHorizontal: 5, paddingTop: 4, gap: 5 }, toolbar: { height: 40, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }, toolbarButton: { width: 44, height: 40, alignItems: "center", justifyContent: "center" }, languagePill: { minHeight: 30, paddingHorizontal: 12, borderRadius: 15, flexDirection: "row", alignItems: "center", gap: 6 }, languageText: { fontSize: 12, fontWeight: "800" }, row: { flexDirection: "row", justifyContent: "center", gap: 4 }, key: { minWidth: 0, borderRadius: 7, borderBottomWidth: 2, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 }, keyText: { fontSize: 18, fontWeight: "600", textAlign: "center" }, hindiKey: { fontSize: 21, fontWeight: "500" }, emojiPanel: { gap: 5 }, modalRoot: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(4,12,8,.58)" }, sheet: { maxHeight: "84%", borderTopLeftRadius: 26, borderTopRightRadius: 26, borderWidth: 1, overflow: "hidden" }, sheetContent: { padding: 20, paddingBottom: 34 }, sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }, sheetTitle: { fontSize: 23, fontWeight: "800" }, sheetSubtitle: { fontSize: 12, marginTop: 4 }, closeButton: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" }, sectionLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginTop: 18, marginBottom: 9 }, settingRow: { minHeight: 56, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 11 }, settingTitle: { flex: 1, fontSize: 14, fontWeight: "700" }, segment: { minHeight: 46, borderRadius: 13, padding: 4, flexDirection: "row" }, segmentButton: { flex: 1, minHeight: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 }, segmentText: { fontSize: 12, fontWeight: "800" } });

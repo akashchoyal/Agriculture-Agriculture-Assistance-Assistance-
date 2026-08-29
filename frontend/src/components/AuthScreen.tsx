@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useApp } from "@/src/context/AppContext";
 import { palette } from "@/src/components/common";
+import KeyboardTextInput from "@/src/keyboard/KeyboardTextInput";
 
 export default function AuthScreen() {
   const { login, signup, googleLogin, t } = useApp();
@@ -13,9 +14,9 @@ export default function AuthScreen() {
     <View style={styles.illustration}><View style={styles.sun} /><View style={styles.hillBack} /><View style={styles.hillFront} /><View style={styles.stem}><View style={styles.leafLeft} /><View style={styles.leafRight} /></View></View>
     <View style={styles.brandRow}><View style={styles.brandMark}><Ionicons name="leaf" size={24} color="#fff" /></View><View><Text style={styles.brand}>{t.appName}</Text><Text style={styles.tagline}>{t.tagline}</Text></View></View>
     <View style={styles.switcher}><Pressable testID="auth-login-mode" onPress={() => { setMode("login"); setError(""); }} style={[styles.switch, mode === "login" && styles.activeSwitch]}><Text style={[styles.switchText, mode === "login" && styles.activeSwitchText]}>{t.login}</Text></Pressable><Pressable testID="auth-signup-mode" onPress={() => { setMode("signup"); setError(""); }} style={[styles.switch, mode === "signup" && styles.activeSwitch]}><Text style={[styles.switchText, mode === "signup" && styles.activeSwitchText]}>{t.signup}</Text></Pressable></View>
-    {mode === "signup" && <View style={styles.inputWrap}><Ionicons name="person-outline" size={19} color="#66736B" /><TextInput testID="auth-name" value={name} onChangeText={setName} placeholder={t.fullName} placeholderTextColor="#8B978F" style={styles.input} /></View>}
-    <View style={styles.inputWrap}><Ionicons name="mail-outline" size={19} color="#66736B" /><TextInput testID="auth-email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder={t.email} placeholderTextColor="#8B978F" style={styles.input} /></View>
-    <View style={styles.inputWrap}><Ionicons name="lock-closed-outline" size={19} color="#66736B" /><TextInput testID="auth-password" value={password} onChangeText={setPassword} secureTextEntry placeholder={t.password} placeholderTextColor="#8B978F" style={styles.input} /></View>
+    {mode === "signup" && <View style={styles.inputWrap}><Ionicons name="person-outline" size={19} color="#66736B" /><KeyboardTextInput testID="auth-name" value={name} onChangeText={setName} placeholder={t.fullName} placeholderTextColor="#8B978F" style={styles.input} /></View>}
+    <View style={styles.inputWrap}><Ionicons name="mail-outline" size={19} color="#66736B" /><KeyboardTextInput testID="auth-email" value={email} onChangeText={setEmail} keyboardMode="email" autoCapitalize="none" keyboardType="email-address" placeholder={t.email} placeholderTextColor="#8B978F" style={styles.input} /></View>
+    <View style={styles.inputWrap}><Ionicons name="lock-closed-outline" size={19} color="#66736B" /><KeyboardTextInput testID="auth-password" value={password} onChangeText={setPassword} keyboardMode="password" secureTextEntry placeholder={t.password} placeholderTextColor="#8B978F" style={styles.input} /></View>
     {!!error && <View testID="auth-error" style={styles.error}><Ionicons name="alert-circle-outline" size={18} color="#BC4749" /><Text style={styles.errorText}>{error}</Text></View>}
     <Pressable testID="auth-submit" onPress={submit} disabled={busy} style={({ pressed }) => [styles.primary, pressed && { opacity: .82 }, busy && { opacity: .6 }]}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{mode === "login" ? t.login : t.signup}</Text>}</Pressable>
     <View style={styles.or}><View style={styles.line} /><Text style={styles.orText}>or</Text><View style={styles.line} /></View>

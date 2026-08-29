@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/src/context/AppContext";
 import { apiRequest } from "@/src/lib/api";
 import { useColors } from "@/src/components/common";
+import KeyboardTextInput from "@/src/keyboard/KeyboardTextInput";
 
 type ScanResult = { scan_id?: string; plant_name?: string; plant_category?: string; diagnosis: string; confidence: string; severity?: string; symptoms: string[]; causes?: string[]; remedies: string[]; model_used?: string };
 type ScanHistoryItem = { scan_id: string; plant_name?: string; plant_category?: string; diagnosis: string; confidence: string; severity?: string; symptoms: string[]; causes?: string[]; remedies: string[]; image_base64: string; language: string; created_at: string; model_used?: string };
@@ -141,7 +142,7 @@ export default function ScannerScreen() {
           <Text style={{ color: c.danger, flex: 1 }}>{error}</Text>
         </View>}
 
-        {image && base64 && !result && <View style={[styles.hintWrap, { backgroundColor: c.card, borderColor: c.border }]}><Ionicons name="nutrition-outline" size={19} color={c.brand} /><TextInput testID="scanner-plant-hint" value={plantHint} onChangeText={setPlantHint} placeholder={t.plantHint} placeholderTextColor={c.muted} maxLength={100} style={[styles.hintInput, { color: c.text }]} /></View>}
+        {image && base64 && !result && <View style={[styles.hintWrap, { backgroundColor: c.card, borderColor: c.border }]}><Ionicons name="nutrition-outline" size={19} color={c.brand} /><KeyboardTextInput testID="scanner-plant-hint" value={plantHint} onChangeText={setPlantHint} placeholder={t.plantHint} placeholderTextColor={c.muted} maxLength={100} style={[styles.hintInput, { color: c.text }]} /></View>}
 
         {image && base64 && !result && <Pressable testID="scanner-analyze" disabled={busy} onPress={() => void analyze()} style={[styles.analyze, { backgroundColor: c.brand }, busy && { opacity: .7 }]}>
           {busy ? <ActivityIndicator color="#fff" /> : <>

@@ -4,11 +4,13 @@ import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "re
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/src/context/AppContext";
 import { useColors } from "@/src/components/common";
+import { useKeyboard } from "@/src/keyboard/KeyboardContext";
 
 export default function SettingsScreen({ onBack }: { onBack: () => void }) {
   const { t, user, updatePreferences } = useApp();
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const keyboard = useKeyboard();
   const showInfo = (title: string, message: string) => Alert.alert(title, message);
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -43,6 +45,8 @@ export default function SettingsScreen({ onBack }: { onBack: () => void }) {
           <View style={styles.row}><View style={[styles.rowIcon, { backgroundColor: c.brandSoft }]}><Ionicons name="notifications-outline" size={19} color={c.brand} /></View><View style={{ flex: 1 }}><Text style={[styles.rowTitle, { color: c.text }]}>{t.notifications}</Text><Text style={[styles.rowSub, { color: c.muted }]}>Crop health reminders</Text></View><Switch testID="notifications-toggle" value={user?.notifications} onValueChange={(value) => void updatePreferences({ notifications: value })} trackColor={{ false: c.border, true: c.brandSoft }} thumbColor={user?.notifications ? c.brand : c.muted} /></View>
           <View style={[styles.divider, { backgroundColor: c.border }]} />
           <View testID="settings-ai-model-status" style={styles.row}><View style={[styles.rowIcon, { backgroundColor: c.brandSoft }]}><Ionicons name="sparkles-outline" size={19} color={c.brand} /></View><View style={{ flex: 1 }}><Text style={[styles.rowTitle, { color: c.text }]}>{t.aiModel}</Text><Text style={[styles.rowSub, { color: c.muted }]}>{t.geminiPrimary}</Text></View><View style={[styles.readyBadge, { backgroundColor: c.brandSoft }]}><Text style={[styles.readyText, { color: c.brand }]}>{t.active}</Text></View></View>
+          <View style={[styles.divider, { backgroundColor: c.border }]} />
+          <Pressable testID="keyboard-settings-row" onPress={keyboard.openSettings} style={styles.row}><View style={[styles.rowIcon, { backgroundColor: c.brandSoft }]}><Ionicons name="keypad-outline" size={19} color={c.brand} /></View><View style={{ flex: 1 }}><Text style={[styles.rowTitle, { color: c.text }]}>{t.keyboardSettings}</Text><Text style={[styles.rowSub, { color: c.muted }]}>{t.keyboardSettingsSubtitle}</Text></View><Ionicons name="chevron-forward" size={18} color={c.muted} /></Pressable>
         </View>
         <Text style={[styles.heading, { color: c.muted, marginTop: 29 }]}>{t.account}</Text>
         <View style={[styles.group, { backgroundColor: c.card, borderColor: c.border }]}>

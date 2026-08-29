@@ -11,9 +11,11 @@ import ChatScreen from "@/src/components/ChatScreen";
 import ProfileScreen from "@/src/components/ProfileScreen";
 import SettingsScreen from "@/src/components/SettingsScreen";
 import LaunchScreen from "@/src/components/LaunchScreen";
+import CustomKeyboard from "@/src/keyboard/CustomKeyboard";
+import { KeyboardProvider } from "@/src/keyboard/KeyboardContext";
 
 type MainScreen = "home" | "scan" | "chat" | "profile" | "settings";
-export default function Index() { return <SafeAreaProvider><AppProvider><App /></AppProvider></SafeAreaProvider>; }
+export default function Index() { return <SafeAreaProvider><AppProvider><KeyboardProvider><App /><CustomKeyboard /></KeyboardProvider></AppProvider></SafeAreaProvider>; }
 function App() {
   const { user, loading, t } = useApp(); const c = useColors(); const [screen, setScreen] = useState<MainScreen>("home"); const [launchReady, setLaunchReady] = useState(false); const insets = useSafeAreaInsets();
   useEffect(() => { const timer = setTimeout(() => setLaunchReady(true), 1700); return () => clearTimeout(timer); }, []);

@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { AudioModule, createAudioPlayer, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState, type AudioPlayer } from "expo-audio";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/src/context/AppContext";
 import { API_BASE, apiRequest } from "@/src/lib/api";
 import { useColors } from "@/src/components/common";
+import KeyboardTextInput from "@/src/keyboard/KeyboardTextInput";
 
 type Message = { role: "user" | "assistant"; content: string; audioUrl?: string; modality?: "text" | "voice"; modelUsed?: string };
 
@@ -247,7 +248,7 @@ export default function ChatScreen() {
             ? <ActivityIndicator size="small" color={c.brand} />
             : <Ionicons name={recorderState.isRecording ? "stop" : "mic-outline"} size={22} color={recorderState.isRecording ? "#fff" : c.brand} />}
         </Pressable>
-        <TextInput
+        <KeyboardTextInput
           testID="chat-input"
           value={value}
           onChangeText={setValue}

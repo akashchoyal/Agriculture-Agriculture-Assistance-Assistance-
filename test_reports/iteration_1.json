@@ -18,6 +18,6 @@
   "seed_data_creation": "None",
   "retest_needed": true,
   "should_call_test_agent_after_fix": true,
-  "context_for_next_testing_agent": "Default account language is Hindi. Public preview: https://agri-ai-assistant-3.preview.emergentagent.com. Visible RN web controls are not native button tags; prefer text or aria selectors until testIDs are added.",
+  "context_for_next_testing_agent": "Default account language is Hindi. Public preview: https://krishismart-app.preview.emergentagent.com. Visible RN web controls are not native button tags; prefer text or aria selectors until testIDs are added.",
   "rca_of_issue": "The logout step was blocked by testability rather than a confirmed product failure: bottom navigation labels changed after selecting English and the settings back Pressable has no accessibilityLabel/testID. Add stable identifiers and rerun the full flow."
 }

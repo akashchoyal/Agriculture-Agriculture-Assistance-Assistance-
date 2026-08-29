@@ -1,0 +1,164 @@
+{
+  "app_name": "KrishiAI - Smart Agriculture Assistant",
+  "personality": "8 Hand-Drawn / Journal LIGHT",
+  "personality_one_liner": "An earthy, grounded smart agriculture assistant combining warm organic paper tones with botanical green accents for a calming, human-centred farming experience.",
+  "color": {
+    "surface": "#FDFBF7",
+    "onSurface": "#2C3531",
+    "surfaceSecondary": "#F5F0E6",
+    "onSurfaceSecondary": "#3D4E46",
+    "surfaceTertiary": "#EAE3D2",
+    "onSurfaceTertiary": "#4A5D54",
+    "surfaceInverse": "#2C3531",
+    "onSurfaceInverse": "#FDFBF7",
+    "brand": "#4F6F52",
+    "brandPrimary": "#4F6F52",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#739072",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#D5E2D4",
+    "onBrandTertiary": "#2C3531",
+    "success": "#588157",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D4A373",
+    "onWarning": "#2C3531",
+    "error": "#BC4749",
+    "onError": "#FFFFFF",
+    "info": "#4A6FA5",
+    "onInfo": "#FFFFFF",
+    "border": "#E2DAC8",
+    "borderStrong": "#4F6F52",
+    "divider": "#EFECE6"
+  },
+  "typography": {
+    "displayFontFamily": "Fraunces",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical padding, calm magazine-like rhythm with 16pt screen margins and 12pt card spacing.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": false,
+    "do's": [
+      "Use organic paper cards",
+      "Use subtle botanical green tints"
+    ],
+    "dont's": [
+      "No heavy glass blur",
+      "No neon cyberpunk elements"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Auth",
+      "purpose": "Email/password login, sign up, and Emergent-managed Google login with instant validation.",
+      "states": {
+        "loading": "Centered botanical spinner with greeting",
+        "empty": "Clean input forms with floating placeholders",
+        "error": "Inline error banner with retry option"
+      },
+      "layout": "Vertical scroll container with warm paper background, branding header, tab switcher (Login / Sign Up), input fields, Google social login button, and language selector."
+    },
+    {
+      "name": "Home",
+      "purpose": "Agriculture dashboard displaying crop status, weather, soil sensors, quick actions, and bilingual updates.",
+      "states": {
+        "loading": "Skeleton cards with organic pulse shimmer",
+        "empty": "Prompt to add first field or crop with illustration",
+        "error": "Retry banner with offline cache indicator"
+      },
+      "layout": "Vertical scrollable dashboard with sticky top header (greeting, weather badge, language & theme toggles), field overview card, quick action grid (Scanner, AI Chat, Weather, Market), recent crop health updates, and bottom navigation."
+    },
+    {
+      "name": "Scanner",
+      "purpose": "Camera & gallery capture interface to scan crops for diseases, pests, and nutrient deficiencies with instant AI diagnosis.",
+      "states": {
+        "loading": "Animated scanning grid with checklist of AI verification steps",
+        "empty": "Camera viewfinder ready with gallery picker prompt",
+        "error": "Unable to detect image or blurry photo warning with recapture button"
+      },
+      "layout": "Camera preview / image container in upper half, diagnosis result breakdown with confidence gauge and actionable remedies in bottom sheet with sticky scan/retake buttons."
+    },
+    {
+      "name": "AIChat",
+      "purpose": "Conversational agricultural expert assistant providing localized crop advice in English and Hindi.",
+      "states": {
+        "loading": "Typing indicator dots with organic pulse",
+        "empty": "Suggested prompt chips (e.g. 'How to cure tomato blight?', 'Best fertilizer for wheat') and welcome greeting",
+        "error": "Network retry button for failed message send"
+      },
+      "layout": "Header with agronomist avatar and language indicator, scrollable message history with left/right alignment, quick prompt chips, and sticky bottom input bar with voice/attachment buttons."
+    },
+    {
+      "name": "Profile",
+      "purpose": "User profile and farm management containing name, age, pincode, country, address, photo, and account actions.",
+      "states": {
+        "loading": "Skeleton loader for profile fields and avatar",
+        "empty": "Prompt to complete missing farm profile details",
+        "error": "Save failure error banner with retry"
+      },
+      "layout": "Cover banner with avatar upload, editable form fields for Name, Age, Pincode, Country, and Address, logout button, and settings shortcuts."
+    },
+    {
+      "name": "Settings",
+      "purpose": "App configurations including language toggle (Hindi/English), theme toggle (Dark/Light), notifications, and help.",
+      "states": {
+        "loading": "Standard list loading skeleton",
+        "empty": "No settings available",
+        "error": "Failed to save setting notification"
+      },
+      "layout": "Grouped list of setting sections (Language, Theme, Notifications, About, Account) with interactive toggles and navigation rows."
+    }
+  ],
+  "images": {
+    "hero_farm": {
+      "url": "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=1200",
+      "dark": "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=1200",
+      "alt": "Lush green agricultural fields under clear sky"
+    },
+    "crop_scanned": {
+      "url": "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&q=80&w=800",
+      "alt": "Healthy green tomato crop leaves"
+    },
+    "avatar_default": {
+      "url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400",
+      "alt": "Farmer avatar portrait"
+    }
+  },
+  "instructions_to_main_agent": "Build the smart agriculture assistant (KrishiAI) mobile app with complete React Native Expo implementation. Ensure all user requirements are fully met: 1) Auth flow with Email/Password and Emergent-managed Google login, 2) Logout option, 3) Language toggle between Hindi and English (with dynamic state across screens), 4) Theme toggle between Dark and Light mode, 5) Agriculture-focused home screen with weather, soil sensors, field overview, and quick action tiles, 6) AI chat assistant with prompt chips and localized responses, 7) Crop scanner with camera/gallery selection and AI diagnosis breakdown, 8) Profile screen with Name, Age, Pincode, Country, Address, and Photo upload, 9) Settings screen for language, theme, and notifications. Use the Hand-Drawn / Journal personality palette (#FDFBF7 paper white, #4F6F52 botanical green, #F5F0E6 card surface). Adhere to all mobile UX rules: touch targets >= 44x44pt, safe area insets respected, loading/empty/error states on all screens, and no banned colors (indigo/violet/purple/navy). Save design guidelines at /app/design_guidelines.json."
+}

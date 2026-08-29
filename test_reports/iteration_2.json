@@ -1,0 +1,25 @@
+{
+  "summary": "Fresh mobile web load, authenticated navigation, settings persistence, logout attempts, and backend auth/profile/preferences/logout contracts were tested. Backend regression tests passed 2/2. UI loaded and login worked, but several required controls lack stable selectors/accessibility labels, preventing reliable end-to-end automation of settings/chat/logout.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AuthScreen", "issue": "Email, password, login, signup, and Google controls have no testID, so localized UI requires brittle placeholder/text selectors.", "testID": "missing", "priority": "MEDIUM"},
+      {"component": "ProfileScreen", "issue": "Profile settings button has no testID or accessibilityLabel; role-based automation could not identify it reliably.", "testID": "missing", "priority": "MEDIUM"},
+      {"component": "HomeScreen/Action", "issue": "Quick action tiles and theme/settings header controls lack testIDs, leaving scanner and settings entry points difficult to automate.", "testID": "missing", "priority": "MEDIUM"},
+      {"component": "ChatScreen", "issue": "Composer and send button lack testIDs; chat integration could not be reliably exercised after navigation drift.", "testID": "missing", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration2.py", "/app/test_reports/pytest/iteration2.xml"],
+  "action_items": ["Add stable testIDs to all auth inputs/buttons, profile settings, home actions/header controls, scanner picker/analyze, chat composer/send, and profile fields/save/logout.", "Use EXPO_BACKEND_URL consistently in frontend API configuration or document the EXPO_PUBLIC_BACKEND_URL alias explicitly."],
+  "critical_code_review_comments": ["frontend/src/lib/api.ts reads EXPO_PUBLIC_BACKEND_URL/Expo extra backendUrl rather than the requested EXPO_BACKEND_URL key; current preview works only because EXPO_PUBLIC_BACKEND_URL is configured.", "Google login button has no error UI around googleLogin(), so rejected/failed OAuth may be silent."],
+  "updated_files": ["/app/backend/tests/test_iteration2.py", "/app/test_reports/iteration_2.json"],
+  "success_rate": {"backend": "100%", "frontend": "50%"},
+  "seed_data_creation": "None; used existing QA account and restored Hindi/light preferences.",
+  "retest_needed": true,
+  "should_call_test_agent_after_fix": true,
+  "context_for_next_testing_agent": "The QA account starts at Hindi/light. Fresh load can restore the authenticated session. Profile navigation appeared visually but was not reliably targeted by role selectors; add selectors before rerunning complete UI coverage.",
+  "rca_of_issue": "The app relies on localized visible text for many interactive controls and only recently added selectors to Settings and bottom tabs. Missing testIDs/accessibility labels cause automation failures independent of backend behavior; backend CRUD/auth invalidation and ObjectId-safe response checks passed."
+}

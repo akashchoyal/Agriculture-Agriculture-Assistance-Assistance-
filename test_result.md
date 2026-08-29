@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Expand the Gemini scanner so vegetables, including karela, can be scanned to identify the disease, what is happening to the plant, likely causes, severity, and remedies."
+user_problem_statement: "Show the owner name Akash Choyal when the KrishiAI app starts."
 backend:
   - task: "Persist and use live GPS location"
     implemented: true
@@ -153,6 +153,23 @@ backend:
         agent: "main"
         comment: "Inline numbered symptom/cause/remedy parsing hardened after QA observation; direct parser test and full 12-test suite passed."
 frontend:
+  - task: "Branded launch screen with owner credit"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/LaunchScreen.tsx, /app/frontend/app/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added an animated KrishiAI launch screen that always displays the exact owner name Akash Choyal, remains visible through session restore for at least 1.7 seconds, and then transitions to auth or the authenticated app. TypeScript and lint pass; 390x844 screenshot verified the settled owner credit."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 10 verified the exact owner name, full launch branding, mobile layout, and automatic login transition; it identified only a web Animated driver warning."
+      - working: true
+        agent: "main"
+        comment: "Made the animation driver platform-aware. Final 390x844 cold-start check passed exact owner text, settled animation, login transition, and zero console warning/error events. TypeScript and lint remain clean."
   - task: "Automatic and manual live location dashboard flow"
     implemented: true
     working: true
@@ -208,8 +225,7 @@ metadata:
   run_ui: true
 test_plan:
   current_focus:
-    - "Vegetable disease diagnosis with optional plant hint"
-    - "Vegetable diagnosis detail card and plant hint input"
+    - "Branded launch screen with owner credit"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -230,3 +246,9 @@ agent_communication:
     message: "Iteration 9 passed backend 12/12 and frontend 100%; recommended hardening inline list parsing and AppContext memo dependencies."
   - agent: "main"
     message: "Both iteration-9 minor recommendations are fixed and self-verified; vegetable scanner testing is complete."
+  - agent: "main"
+    message: "Verify the launch screen at 390x844: exact text Akash Choyal is visible after animation, KrishiAI branding does not overflow, and the app transitions to the existing login screen without console errors."
+  - agent: "testing"
+    message: "Iteration 10 passed launch UX and transition; requested cleanup of the web useNativeDriver warning."
+  - agent: "main"
+    message: "Platform-aware animation driver cleanup is complete and self-verified with no console warning/error events; owner launch feature is ready for user review."

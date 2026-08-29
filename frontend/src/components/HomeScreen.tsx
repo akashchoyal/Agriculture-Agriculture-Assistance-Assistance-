@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "@/src/context/AppContext";
 import { apiRequest } from "@/src/lib/api";
 import { useColors } from "@/src/components/common";
 import type { Language } from "@/src/i18n";
+import { useLiveLocation } from "@/src/hooks/useLiveLocation";
 
 type ForecastDay = { date: string; max_temp: number; min_temp: number; condition: string; icon: keyof typeof Ionicons.glyphMap; rain_chance: number };
 type Weather = { location: string; state: string; current_temp: number; current_humidity: number; current_condition: string; current_icon: keyof typeof Ionicons.glyphMap; updated_at: string; forecast: ForecastDay[] };
@@ -45,22 +46,31 @@ export default function HomeScreen({ onNavigate, onSettings }: { onNavigate: (sc
   const [mandi, setMandi] = useState<Mandi | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [mandiLoading, setMandiLoading] = useState(true);
+  const weatherRequest = useRef(0);
+  const mandiRequest = useRef(0);
 
   const loadWeather = useCallback(async () => {
     if (!token) return;
+    const requestId = ++weatherRequest.current;
     setWeatherLoading(true);
-    try { setWeather(await apiRequest<Weather>("/weather", {}, token)); }
-    catch { setWeather(null); }
-    finally { setWeatherLoading(false); }
+    try { const next = await apiRequest<Weather>("/weather", {}, token); if (requestId === weatherRequest.current) setWeather(next); }
+    catch { if (requestId === weatherRequest.current) setWeather(null); }
+    finally { if (requestId === weatherRequest.current) setWeatherLoading(false); }
   }, [token]);
 
   const loadMandi = useCallback(async () => {
     if (!token) return;
+    const requestId = ++mandiRequest.current;
     setMandiLoading(true);
-    try { setMandi(await apiRequest<Mandi>("/mandi", {}, token)); }
+    try { const next = await apiRequest<Mandi>("/mandi", {}, token); if (requestId === mandiRequest.current) setMandi(next); }
     catch { /* non-critical */ }
-    finally { setMandiLoading(false); }
+    finally { if (requestId === mandiRequest.current) setMandiLoading(false); }
   }, [token]);
+
+  const refreshLocalData = useCallback(async () => {
+    await Promise.all([loadWeather(), loadMandi()]);
+  }, [loadMandi, loadWeather]);
+  const { status: locationStatus, locate } = useLiveLocation(refreshLocalData);
 
   useEffect(() => { void loadWeather(); void loadMandi(); }, [loadWeather, loadMandi]);
 
@@ -101,6 +111,22 @@ export default function HomeScreen({ onNavigate, onSettings }: { onNavigate: (sc
           </View>
           <Ionicons name={weather?.current_icon || "partly-sunny-outline"} size={58} color="#F7D6A8" />
         </Pressable>
+
+        <View style={styles.locationWrap}>
+          <Pressable
+            testID="home-use-current-location"
+            accessibilityLabel={t.useCurrentLocation}
+            disabled={locationStatus === "locating"}
+            onPress={() => void locate()}
+            style={({ pressed }) => [styles.locationButton, { backgroundColor: c.card, borderColor: c.border }, pressed && { opacity: .7 }]}
+          >
+            {locationStatus === "locating" ? <ActivityIndicator size="small" color={c.brand} /> : <Ionicons name="navigate-circle-outline" size={20} color={c.brand} />}
+            <Text style={[styles.locationButtonText, { color: c.text }]}>{t.useCurrentLocation}</Text>
+          </Pressable>
+          <Text testID="home-location-status" style={[styles.locationStatus, { color: locationStatus === "active" ? c.brand : c.muted }]}>
+            {locationStatus === "locating" ? t.findingLocation : locationStatus === "active" ? t.liveLocationActive : locationStatus === "denied" ? t.locationPermissionDenied : locationStatus === "error" ? t.locationUnavailable : ""}
+          </Text>
+        </View>
 
         {weather && weather.forecast.length > 0 && (
           <View style={styles.forecastRow} testID="weather-forecast">
@@ -226,6 +252,10 @@ const styles = StyleSheet.create({
   weatherTemp: { color: "#fff", fontSize: 36, fontWeight: "800", marginTop: 6 },
   weatherUnit: { fontSize: 16, fontWeight: "500" },
   weatherText: { color: "#E6F0E3", fontSize: 12, marginTop: 2 },
+  locationWrap: { marginTop: 10 },
+  locationButton: { minHeight: 48, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  locationButtonText: { fontSize: 13, fontWeight: "800" },
+  locationStatus: { minHeight: 18, marginTop: 5, textAlign: "center", fontSize: 11, fontWeight: "600" },
   forecastRow: { flexDirection: "row", gap: 8, marginTop: 12 },
   forecastCard: { flex: 1, borderRadius: 14, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 6, alignItems: "center" },
   forecastDay: { fontSize: 11, fontWeight: "700", textTransform: "uppercase" },

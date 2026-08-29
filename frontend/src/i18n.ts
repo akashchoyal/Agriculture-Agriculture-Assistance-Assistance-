@@ -19,6 +19,7 @@ export const copy = {
     today: "Today", tomorrow: "Tomorrow", rainChance: "rain", feelsHumid: "humidity", weatherError: "Weather unavailable", refresh: "Refresh",
     mandiPrices: "Mandi prices", mspLabel: "Govt MSP", liveLabel: "Live", perQuintal: "/quintal", mandiIntro: "Reference rates for your state",
     voiceHold: "Hold to speak", voiceRelease: "Release to send", voiceRecording: "Listening…", voiceTranscribing: "Transcribing…", voicePermission: "Microphone permission is needed to talk with KrishiAI", voiceError: "Voice message could not be sent", play: "Play reply", stop: "Stop", listening: "Playing…",
+    useCurrentLocation: "Use current location", findingLocation: "Finding your live location…", liveLocationActive: "Live location is active", locationPermissionDenied: "Location permission denied · using saved location", locationUnavailable: "Location unavailable · using saved location", currentLocationSaved: "Current location saved",
   },
   hi: {
     appName: "KrishiAI", tagline: "आपका खेत। और समझदार।", welcome: "सुप्रभात", farmer: "किसान",
@@ -38,6 +39,7 @@ export const copy = {
     today: "आज", tomorrow: "कल", rainChance: "बारिश", feelsHumid: "नमी", weatherError: "मौसम की जानकारी नहीं मिली", refresh: "फिर से लोड करें",
     mandiPrices: "मंडी भाव", mspLabel: "सरकारी MSP", liveLabel: "लाइव", perQuintal: "/क्विंटल", mandiIntro: "आपके राज्य के लिए भाव",
     voiceHold: "बोलने के लिए दबाएं", voiceRelease: "भेजने के लिए छोड़ें", voiceRecording: "सुन रहा हूँ…", voiceTranscribing: "समझ रहा हूँ…", voicePermission: "बात करने के लिए माइक की अनुमति चाहिए", voiceError: "आवाज़ नहीं भेजी जा सकी", play: "जवाब सुनें", stop: "रोकें", listening: "बज रहा है…",
+    useCurrentLocation: "मौजूदा लोकेशन इस्तेमाल करें", findingLocation: "आपकी लाइव लोकेशन मिल रही है…", liveLocationActive: "लाइव लोकेशन चालू है", locationPermissionDenied: "लोकेशन अनुमति नहीं मिली · सेव लोकेशन इस्तेमाल हो रही है", locationUnavailable: "लोकेशन नहीं मिली · सेव लोकेशन इस्तेमाल हो रही है", currentLocationSaved: "मौजूदा लोकेशन सेव है",
   },
 } as const;
 

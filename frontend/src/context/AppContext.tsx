@@ -7,11 +7,11 @@ import { copy, Language, Copy } from "@/src/i18n";
 
 WebBrowser.maybeCompleteAuthSession();
 
-export type User = { user_id: string; email: string; name: string; age: string; pincode: string; country: string; address: string; photo?: string | null; language: Language; theme: "light" | "dark"; notifications: boolean };
+export type User = { user_id: string; email: string; name: string; age: string; pincode: string; country: string; address: string; photo?: string | null; language: Language; theme: "light" | "dark"; notifications: boolean; latitude?: number | null; longitude?: number | null; location_city?: string; location_state?: string; location_updated_at?: string | null };
 type AppContextValue = {
   user: User | null; loading: boolean; language: Language; theme: "light" | "dark"; t: Copy; token: string | null;
   login: (email: string, password: string) => Promise<void>; signup: (name: string, email: string, password: string) => Promise<void>; googleLogin: () => Promise<void>; logout: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>; updatePreferences: (data: { language?: Language; theme?: "light" | "dark"; notifications?: boolean }) => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>; updatePreferences: (data: { language?: Language; theme?: "light" | "dark"; notifications?: boolean }) => Promise<void>; updateLocation: (latitude: number, longitude: number) => Promise<void>;
 };
 const AppContext = createContext<AppContextValue | null>(null);
 const handledSessions = new Set<string>();
@@ -72,8 +72,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => { if (token) await apiRequest("/auth/logout", { method: "POST" }, token).catch(() => undefined); await clearSessionToken(); setToken(null); setUser(null); };
   const updateProfile = async (data: Partial<User>) => { if (!token) return; const next = await apiRequest<User>("/profile", { method: "PATCH", body: JSON.stringify(data) }, token); setUser(next); };
   const updatePreferences = async (data: { language?: Language; theme?: "light" | "dark"; notifications?: boolean }) => { if (!token) return; const next = await apiRequest<User>("/preferences", { method: "PATCH", body: JSON.stringify(data) }, token); setUser(next); };
+  const updateLocation = useCallback(async (latitude: number, longitude: number) => { if (!token) return; const next = await apiRequest<User>("/profile/location", { method: "PATCH", body: JSON.stringify({ latitude, longitude }) }, token); setUser(next); }, [token]);
   const language = user?.language || "hi"; const theme = user?.theme || "light";
-  const value = useMemo(() => ({ user, loading, language, theme, t: copy[language], token, login, signup, googleLogin, logout, updateProfile, updatePreferences }), [user, loading, language, theme, token]);
+  const value = useMemo(() => ({ user, loading, language, theme, t: copy[language], token, login, signup, googleLogin, logout, updateProfile, updatePreferences, updateLocation }), [user, loading, language, theme, token, updateLocation]);
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 

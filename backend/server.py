@@ -57,6 +57,11 @@ class UserPublic(BaseModel):
     language: str = "hi"
     theme: str = "light"
     notifications: bool = True
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location_city: str = ""
+    location_state: str = ""
+    location_updated_at: Optional[datetime] = None
 
 
 class AuthResponse(BaseModel):
@@ -81,6 +86,11 @@ class ProfileUpdate(BaseModel):
     country: Optional[str] = None
     address: Optional[str] = None
     photo: Optional[str] = None
+
+
+class LocationUpdate(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
 
 
 class PreferencesUpdate(BaseModel):
@@ -178,6 +188,11 @@ def public_user(document: dict) -> UserPublic:
         language=document.get("language", "hi"),
         theme=document.get("theme", "light"),
         notifications=document.get("notifications", True),
+        latitude=document.get("latitude"),
+        longitude=document.get("longitude"),
+        location_city=document.get("location_city", ""),
+        location_state=document.get("location_state", ""),
+        location_updated_at=document.get("location_updated_at"),
     )
 
 
@@ -406,6 +421,7 @@ async def delete_scan(scan_id: str, authorization: Optional[str] = Header(defaul
 
 # ---------------- Weather + Mandi ----------------
 _geo_cache: Dict[str, dict] = {}
+_reverse_geo_cache: Dict[str, dict] = {}
 _weather_cache: Dict[str, Tuple[float, dict]] = {}
 _mandi_cache: Dict[str, Tuple[float, dict]] = {}
 DATA_GOV_KEY = os.getenv("DATA_GOV_API_KEY", "").strip()
@@ -454,18 +470,94 @@ async def geocode_pincode(pincode: str) -> Optional[dict]:
     return info
 
 
+async def reverse_geocode_coordinates(latitude: float, longitude: float) -> Optional[dict]:
+    cache_key = f"{latitude:.4f},{longitude:.4f}"
+    if cache_key in _reverse_geo_cache:
+        return _reverse_geo_cache[cache_key]
+    try:
+        async with httpx.AsyncClient(timeout=8, headers={"User-Agent": "KrishiAI/1.0 (support@krishiai.app)"}) as http:
+            response = await http.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "lat": latitude, "lon": longitude, "format": "jsonv2",
+                    "addressdetails": 1, "accept-language": "en",
+                },
+            )
+    except Exception:
+        return None
+    if response.status_code != 200:
+        return None
+    entry = response.json()
+    address = entry.get("address", {})
+    state = address.get("state") or address.get("region") or "India"
+    city = (
+        address.get("city") or address.get("town") or address.get("village")
+        or address.get("municipality") or address.get("county") or "Current location"
+    )
+    info = {
+        "lat": latitude,
+        "lon": longitude,
+        "city": city,
+        "state": state,
+        "pincode": address.get("postcode", ""),
+        "country": address.get("country", "India"),
+        "display_name": entry.get("display_name", ""),
+    }
+    _reverse_geo_cache[cache_key] = info
+    return info
+
+
+async def geo_for_user(user: dict) -> dict:
+    latitude = user.get("latitude")
+    longitude = user.get("longitude")
+    if latitude is not None and longitude is not None:
+        return {
+            "lat": float(latitude), "lon": float(longitude),
+            "city": user.get("location_city") or "Current location",
+            "state": user.get("location_state") or "India",
+        }
+    pincode = (user.get("pincode") or "").strip() or "141001"
+    return await geocode_pincode(pincode) or DEFAULT_GEO
+
+
 DEFAULT_GEO = {"lat": 30.9034, "lon": 75.8286, "city": "Ludhiana", "state": "Punjab"}
+
+
+@api_router.patch("/profile/location", response_model=UserPublic)
+async def update_profile_location(input: LocationUpdate, authorization: Optional[str] = Header(default=None)):
+    user = await current_user(authorization)
+    latitude = round(input.latitude, 6)
+    longitude = round(input.longitude, 6)
+    geo = await reverse_geocode_coordinates(latitude, longitude)
+    updates = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "location_updated_at": datetime.now(timezone.utc),
+    }
+    if geo:
+        updates.update({
+            "location_city": geo["city"],
+            "location_state": geo["state"],
+            "country": geo["country"],
+        })
+        if geo.get("pincode"):
+            updates["pincode"] = geo["pincode"]
+        if geo.get("display_name"):
+            updates["address"] = geo["display_name"][:500]
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": updates})
+    fresh = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    return public_user(fresh)
 
 
 @api_router.get("/weather", response_model=WeatherResponse)
 async def weather(authorization: Optional[str] = Header(default=None)):
     user = await current_user(authorization)
-    pincode = (user.get("pincode") or "").strip() or "141001"
+    geo = await geo_for_user(user)
+    cache_key = f"gps:{geo['lat']:.3f},{geo['lon']:.3f}" if user.get("latitude") is not None else f"pin:{(user.get('pincode') or '141001').strip()}"
     now = time.time()
-    cached = _weather_cache.get(pincode)
+    cached = _weather_cache.get(cache_key)
     if cached and cached[0] > now:
         return WeatherResponse(**cached[1])
-    geo = await geocode_pincode(pincode) or DEFAULT_GEO
     try:
         async with httpx.AsyncClient(timeout=10) as http:
             response = await http.get(
@@ -504,7 +596,7 @@ async def weather(authorization: Optional[str] = Header(default=None)):
         "updated_at": datetime.now(timezone.utc),
         "forecast": [day.model_dump() for day in forecast],
     }
-    _weather_cache[pincode] = (now + 1800, payload)
+    _weather_cache[cache_key] = (now + 1800, payload)
     return WeatherResponse(**payload)
 
 
@@ -568,8 +660,7 @@ async def _fetch_live_mandi(state: str) -> List[dict]:
 @api_router.get("/mandi", response_model=MandiResponse)
 async def mandi(authorization: Optional[str] = Header(default=None)):
     user = await current_user(authorization)
-    pincode = (user.get("pincode") or "").strip() or "141001"
-    geo = _geo_cache.get(pincode) or await geocode_pincode(pincode) or DEFAULT_GEO
+    geo = await geo_for_user(user)
     state = geo["state"]
     now = time.time()
     cache_key = f"state:{state}"

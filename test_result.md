@@ -101,3 +101,57 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Add live location for dashboard weather and nearby mandi prices, request permission automatically and through a button, and save the detected location to the farmer profile."
+backend:
+  - task: "Persist and use live GPS location"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "PATCH /api/profile/location validates coordinates, reverse geocodes and persists profile fields; curl verified 401, 422, successful save, GPS weather, and GPS-state mandi responses."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 7 backend regression passed 6/6 tests for authentication, validation, persistence, weather, and mandi location context."
+frontend:
+  - task: "Automatic and manual live location dashboard flow"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/hooks/useLiveLocation.ts, /app/frontend/src/components/HomeScreen.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Playwright web preview with granted geolocation verified auto-detection, localized active status, live weather refresh, and saved location in Profile."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 7 passed denied-permission fallback, profile persistence display, tabs, layout, and dashboard regression; its runner could not grant browser geolocation."
+      - working: true
+        agent: "main"
+        comment: "Post-QA explicit browser-context permission grant reproduced the active transition at 390x844; live location status and weather both rendered with no console errors."
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 7
+  run_ui: true
+test_plan:
+  current_focus:
+    - "Persist and use live GPS location"
+    - "Automatic and manual live location dashboard flow"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+agent_communication:
+  - agent: "main"
+    message: "Test valid/invalid/unauthorized profile location API, weather and mandi GPS context, automatic permission flow, manual location refresh, denial fallback, profile display, and regressions in login/dashboard navigation."
+  - agent: "testing"
+    message: "Iteration 7: backend 100%; frontend denial/fallback and profile flows pass. Granted permission was constrained by the testing runner."
+  - agent: "main"
+    message: "Granted permission path independently re-verified with explicit browser context; feature testing is complete."

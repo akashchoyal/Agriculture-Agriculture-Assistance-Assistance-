@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Scan crops and add profile photos",
-        "NSMicrophoneUsageDescription": "Speak questions to your AI farm assistant"
+        "NSMicrophoneUsageDescription": "Speak questions to your AI farm assistant",
+        "NSLocationWhenInUseUsageDescription": "Show local weather and mandi prices"
       },
       "bundleIdentifier": "com.emergent.agriaiassistant.bcebcx"
     },
@@ -20,7 +21,9 @@
       "permissions": [
         "CAMERA",
         "READ_MEDIA_IMAGES",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -45,7 +48,13 @@
           "backgroundColor": "#000000"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Show local weather and mandi prices"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

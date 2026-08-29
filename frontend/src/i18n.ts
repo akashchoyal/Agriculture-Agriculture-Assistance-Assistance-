@@ -9,8 +9,8 @@ export const copy = {
     recentHealth: "Recent crop health", healthy: "Healthy", viewAll: "View all", fieldTip: "Field tip", tip: "Water early morning to reduce evaporation.",
     login: "Log in", signup: "Create account", email: "Email address", password: "Password", fullName: "Your name", continueGoogle: "Continue with Google",
     noAccount: "New to KrishiAI?", haveAccount: "Already have an account?", language: "Language", theme: "Appearance", light: "Light", dark: "Dark",
-    scanTitle: "Crop scanner", scanSubtitle: "Spot problems before they spread", takePhoto: "Take a photo", choosePhoto: "Choose from gallery", scanNow: "Analyze crop", retake: "Scan another crop",
-    diagnosis: "AI diagnosis", confidence: "Confidence", symptoms: "What we noticed", remedies: "What to do next", scanDisclaimer: "AI guidance is a starting point. Confirm serious issues with a local agronomist.",
+    scanTitle: "Crop & vegetable scanner", scanSubtitle: "Detect diseases in crops and vegetables", takePhoto: "Take a photo", choosePhoto: "Choose from gallery", scanNow: "Analyze plant", retake: "Scan another plant",
+    diagnosis: "AI diagnosis", confidence: "Confidence", severity: "Severity", symptoms: "What we noticed", causes: "Possible causes", remedies: "What to do next", plantDetected: "Plant detected", plantHint: "Vegetable/crop name (optional), e.g. Karela", scanDisclaimer: "AI guidance is a starting point. Confirm serious issues with a local agronomist.",
     chatTitle: "Ask KrishiAI", chatSubtitle: "Practical advice for your farm", messagePlaceholder: "Ask about your crop...", send: "Send", suggestions: ["How do I cure tomato blight?", "Best fertilizer for wheat", "Why are my leaves yellow?"],
     profileTitle: "Your profile", editProfile: "Edit profile", age: "Age", pincode: "Pincode", country: "Country", address: "Farm address", save: "Save changes", saved: "Profile saved", photo: "Profile photo", complete: "Complete your farm profile",
     preferences: "Preferences", notifications: "Notifications", help: "Help & support", about: "About KrishiAI", account: "Account", chooseLanguage: "Choose language", chooseTheme: "Choose theme", cancel: "Cancel", done: "Done",
@@ -20,6 +20,7 @@ export const copy = {
     mandiPrices: "Mandi prices", mspLabel: "Govt MSP", liveLabel: "Live", perQuintal: "/quintal", mandiIntro: "Reference rates for your state",
     voiceHold: "Hold to speak", voiceRelease: "Release to send", voiceRecording: "Listening…", voiceTranscribing: "Transcribing…", voicePermission: "Microphone permission is needed to talk with KrishiAI", voiceError: "Voice message could not be sent", play: "Play reply", stop: "Stop", listening: "Playing…",
     useCurrentLocation: "Use current location", findingLocation: "Finding your live location…", liveLocationActive: "Live location is active", locationPermissionDenied: "Location permission denied · using saved location", locationUnavailable: "Location unavailable · using saved location", currentLocationSaved: "Current location saved",
+    aiModel: "AI model", geminiPrimary: "Gemini 3 Flash · GPT fallback", active: "Active",
   },
   hi: {
     appName: "KrishiAI", tagline: "आपका खेत। और समझदार।", welcome: "सुप्रभात", farmer: "किसान",
@@ -29,8 +30,8 @@ export const copy = {
     recentHealth: "हाल की फसल स्थिति", healthy: "स्वस्थ", viewAll: "सब देखें", fieldTip: "खेत की सलाह", tip: "वाष्पीकरण कम करने के लिए सुबह जल्दी पानी दें।",
     login: "लॉग इन", signup: "नया खाता", email: "ईमेल पता", password: "पासवर्ड", fullName: "आपका नाम", continueGoogle: "Google से जारी रखें",
     noAccount: "KrishiAI पर नए हैं?", haveAccount: "पहले से खाता है?", language: "भाषा", theme: "रूप", light: "लाइट", dark: "डार्क",
-    scanTitle: "फसल स्कैनर", scanSubtitle: "समस्या फैलने से पहले पहचानें", takePhoto: "फोटो लें", choosePhoto: "गैलरी से चुनें", scanNow: "फसल का विश्लेषण", retake: "दूसरी फसल स्कैन करें",
-    diagnosis: "AI जांच", confidence: "विश्वास स्तर", symptoms: "हमें यह दिखा", remedies: "अब क्या करें", scanDisclaimer: "AI सलाह शुरुआत के लिए है। गंभीर समस्या में स्थानीय कृषि विशेषज्ञ से मिलें।",
+    scanTitle: "फसल और सब्जी स्कैनर", scanSubtitle: "फसल और सब्जियों की बीमारी पहचानें", takePhoto: "फोटो लें", choosePhoto: "गैलरी से चुनें", scanNow: "पौधे की जांच करें", retake: "दूसरा पौधा स्कैन करें",
+    diagnosis: "AI जांच", confidence: "विश्वास स्तर", severity: "गंभीरता", symptoms: "हमें यह दिखा", causes: "संभावित कारण", remedies: "अब क्या करें", plantDetected: "पहचाना गया पौधा", plantHint: "सब्जी/फसल का नाम (वैकल्पिक), जैसे करेला", scanDisclaimer: "AI सलाह शुरुआत के लिए है। गंभीर समस्या में स्थानीय कृषि विशेषज्ञ से मिलें।",
     chatTitle: "KrishiAI से पूछें", chatSubtitle: "आपके खेत के लिए उपयोगी सलाह", messagePlaceholder: "अपनी फसल के बारे में पूछें...", send: "भेजें", suggestions: ["टमाटर का झुलसा रोग कैसे ठीक करें?", "गेहूं के लिए अच्छा खाद", "पत्तियां पीली क्यों हो रही हैं?"],
     profileTitle: "आपकी प्रोफ़ाइल", editProfile: "प्रोफ़ाइल बदलें", age: "उम्र", pincode: "पिन कोड", country: "देश", address: "खेत का पता", save: "बदलाव सहेजें", saved: "प्रोफ़ाइल सेव हो गई", photo: "प्रोफ़ाइल फोटो", complete: "अपनी कृषि प्रोफ़ाइल पूरी करें",
     preferences: "पसंद", notifications: "नोटिफिकेशन", help: "मदद और सहायता", about: "KrishiAI के बारे में", account: "खाता", chooseLanguage: "भाषा चुनें", chooseTheme: "रूप चुनें", cancel: "रद्द करें", done: "हो गया",
@@ -40,6 +41,7 @@ export const copy = {
     mandiPrices: "मंडी भाव", mspLabel: "सरकारी MSP", liveLabel: "लाइव", perQuintal: "/क्विंटल", mandiIntro: "आपके राज्य के लिए भाव",
     voiceHold: "बोलने के लिए दबाएं", voiceRelease: "भेजने के लिए छोड़ें", voiceRecording: "सुन रहा हूँ…", voiceTranscribing: "समझ रहा हूँ…", voicePermission: "बात करने के लिए माइक की अनुमति चाहिए", voiceError: "आवाज़ नहीं भेजी जा सकी", play: "जवाब सुनें", stop: "रोकें", listening: "बज रहा है…",
     useCurrentLocation: "मौजूदा लोकेशन इस्तेमाल करें", findingLocation: "आपकी लाइव लोकेशन मिल रही है…", liveLocationActive: "लाइव लोकेशन चालू है", locationPermissionDenied: "लोकेशन अनुमति नहीं मिली · सेव लोकेशन इस्तेमाल हो रही है", locationUnavailable: "लोकेशन नहीं मिली · सेव लोकेशन इस्तेमाल हो रही है", currentLocationSaved: "मौजूदा लोकेशन सेव है",
+    aiModel: "AI मॉडल", geminiPrimary: "Gemini 3 Flash · GPT बैकअप", active: "चालू",
   },
 } as const;
 

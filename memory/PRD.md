@@ -5,7 +5,7 @@ Build a mobile smart-agriculture assistant with email/password and Google login,
 
 ## Architecture
 - Expo SDK 54 React Native frontend with Expo Router entry, Safe Area Context, Ionicons, Image Picker, expo-location foreground GPS, secure token storage, and an in-app four-area navigation shell.
-- FastAPI backend on `0.0.0.0:8001`, MongoDB via Motor, custom seven-day bearer sessions, bcrypt email/password auth, Emergent-managed Google session exchange, and server-side LLM image/text requests.
+- FastAPI backend on `0.0.0.0:8001`, MongoDB via Motor, custom seven-day bearer sessions, bcrypt email/password auth, Emergent-managed Google session exchange, and server-side Gemini-first LLM image/text requests with GPT fallback.
 - MongoDB collections: `users`, `user_sessions`, `chat_messages`, and the existing `status_checks`; custom `user_id` values and `_id`-free API projections keep responses JSON-safe.
 
 ## User personas
@@ -19,7 +19,7 @@ Build a mobile smart-agriculture assistant with email/password and Google login,
 3. Light/dark appearance preference with persistence.
 4. Agriculture-focused dashboard with field health, weather, quick actions, and updates.
 5. Authenticated AI chat with bilingual agriculture guidance and persisted messages.
-6. Camera/gallery crop scanner accepting base64 JPEG/PNG/WEBP and returning diagnosis, confidence, symptoms, and remedies.
+6. Camera/gallery crop-and-vegetable scanner accepting base64 JPEG/PNG/WEBP and returning plant name/category, diagnosis, confidence, severity, symptoms, causes, and remedies.
 7. Profile fields: name, age, pincode, country, address, and base64 profile photo.
 8. Settings for language, theme, notifications, help, and about.
 
@@ -32,6 +32,8 @@ Build a mobile smart-agriculture assistant with email/password and Google login,
 - 2026-08-29: Replaced mocked weather + market tiles on Home with live data. `GET /api/weather` uses Open-Meteo (geocoded via Nominatim from user's pincode) and returns current temp/humidity/condition + 3-day forecast. `GET /api/mandi` returns live rates from data.gov.in when `DATA_GOV_API_KEY` is set, else falls back to real Government of India MSP rates (Kharif + Rabi 2025-26) labelled clearly. Both endpoints cached 30 minutes per pincode/state.
 - 2026-08-29: Added Voice Chat. Farmers tap the mic in Chat, speak their question in Hindi (or English), and hear the AI reply spoken back. Backend: `POST /api/ai/voice-chat` transcribes with OpenAI Whisper (whisper-1), routes transcript through the existing chat LLM, then synthesizes the reply with OpenAI TTS (tts-1, voice `nova` for Hindi / `alloy` for English) — all via the Emergent Universal LLM key. `POST /api/ai/tts` + `GET /api/ai/voice/{key}.mp3` serve cached audio (1h TTL). Frontend uses `expo-audio` for recording (HIGH_QUALITY preset) and `createAudioPlayer` for playback with correct `setAudioModeAsync` toggling; every AI voice reply auto-plays and can be replayed via a Play button. Microphone permissions added to `app.json`.
 - 2026-08-29: Added foreground live location. After login, the dashboard requests location permission and auto-detects GPS; farmers can manually refresh with “Use current location.” `PATCH /api/profile/location` validates and stores coordinates, reverse-geocoded city/state/pincode/address, and update time. Weather and mandi endpoints now prioritize saved GPS context and retain the pincode fallback. The saved place is visible in Profile. iOS/Android foreground permission descriptions and Hindi/English states are included.
+- 2026-08-29: Integrated Gemini 3 Flash (`gemini-3-flash-preview`) as the primary model for typed chat, voice-chat answer generation, and crop image analysis. Each request creates a fresh streaming LLM session; GPT-5.4 is retained as an automatic server-side fallback. API responses and persisted assistant/scan records include `model_used`, while Chat, Scanner, and Settings show the active Gemini model. OpenAI Whisper and TTS remain unchanged for voice transcription/playback.
+- 2026-08-29: Expanded Gemini Vision scanning to vegetables including karela/bitter gourd, gourds, tomato, potato, onion, brinjal, okra, chilli, cabbage, cauliflower, peas, and leafy greens. Scan results now identify plant/category, disease or pest/nutrient issue, confidence, severity, visible symptoms, likely causes, and safe integrated remedies. Farmers can enter an optional known vegetable/crop hint to improve visually ambiguous leaf identification. Hindi scan/chat values explicitly prefer Devanagari script.
 
 ## Prioritized backlog
 - P0: Monitor AI response cost/latency and add rate limiting before high-volume use.

@@ -1,6 +1,6 @@
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 import { apiRequest, clearSessionToken, getSessionToken, saveSessionToken } from "@/src/lib/api";
 import { copy, Language, Copy } from "@/src/i18n";
@@ -74,7 +74,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updatePreferences = async (data: { language?: Language; theme?: "light" | "dark"; notifications?: boolean }) => { if (!token) return; const next = await apiRequest<User>("/preferences", { method: "PATCH", body: JSON.stringify(data) }, token); setUser(next); };
   const updateLocation = useCallback(async (latitude: number, longitude: number) => { if (!token) return; const next = await apiRequest<User>("/profile/location", { method: "PATCH", body: JSON.stringify({ latitude, longitude }) }, token); setUser(next); }, [token]);
   const language = user?.language || "hi"; const theme = user?.theme || "light";
-  const value = useMemo(() => ({ user, loading, language, theme, t: copy[language], token, login, signup, googleLogin, logout, updateProfile, updatePreferences, updateLocation }), [user, loading, language, theme, token, updateLocation]);
+  const value: AppContextValue = { user, loading, language, theme, t: copy[language], token, login, signup, googleLogin, logout, updateProfile, updatePreferences, updateLocation };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 

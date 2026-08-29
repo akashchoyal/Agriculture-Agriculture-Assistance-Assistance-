@@ -4,4 +4,5 @@
 - Images must contain real visual features such as leaves, edges, texture, or shadows.
 - Do not use SVG, BMP, HEIC, blank, solid-color, or uniform-variance images.
 - Keep test image payloads reasonably sized; transcode and re-detect MIME after any transformation.
+- For animated GIF, APNG, or WEBP files, extract only the first frame before testing.
 - Validate that crop analysis receives the base64 payload on the backend and returns a diagnosis response.

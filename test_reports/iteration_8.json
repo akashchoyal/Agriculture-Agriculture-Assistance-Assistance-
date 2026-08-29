@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 8 completed for Gemini integration across backend and mobile-web frontend. Backend pytest passed 6/6 for Gemini chat (hi/en), real-image scan contract, model_used persistence in history, isolated Gemini->GPT fallback via monkeypatch, and voice-chat tuple/model_used compatibility. Frontend Playwright at 390x844 passed login, chat Gemini badges, scanner history/result model badge + confidence layout, settings Gemini active status, home weather/mandi regression, and no console/runtime/UI overflow issues.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/ai/chat",
+        "issue": "language='hi' can return meaningful Romanized Hindi (Hinglish) instead of Devanagari script; content remains useful but script consistency is not guaranteed."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_gemini_iteration8.py",
+    "/app/test_reports/pytest/iteration8.xml",
+    "/app/test_reports/ui_iteration8_smoke/home_load.jpeg",
+    "/app/test_reports/ui_iteration8/final_state.jpeg",
+    "/app/test_reports/ui_iteration8_regression/home_regression.jpeg"
+  ],
+  "action_items": [
+    "Optional: If strict script policy is required, adjust Hindi prompting/validation to prefer Devanagari output for language='hi'.",
+    "Optional maintainability: split /app/backend/server.py (>800 lines) into focused modules to reduce regression risk."
+  ],
+  "critical_code_review_comments": [
+    "Gemini primary + GPT fallback chain works as intended in isolated unit fallback test (no production config mutation).",
+    "Scan history persistence includes model_used and excludes Mongo _id in API response as expected.",
+    "/app/backend/server.py exceeds 800 lines and should be modularized (auth/profile/ai/weather/mandi/voice) for safer iteration speed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_gemini_iteration8.py",
+    "/app/test_reports/pytest/iteration8.xml",
+    "/app/test_reports/iteration_8.json"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6)",
+    "frontend": "100% (all requested Gemini/UI regression checks passed)"
+  },
+  "seed_data_creation": "Temporary scan records were created during tests and cleaned using DELETE /api/scan/history/{scan_id}.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Public URL used: EXPO_PUBLIC_BACKEND_URL from frontend/.env. QA credentials from /app/memory/test_credentials.md are valid. Voice-chat endpoint is stable with multipart requests when Content-Type is not forced to application/json.",
+  "rca_of_issue": "Observed intermittent 422 on /api/ai/voice-chat during early test draft was caused by test-client header contamination (session default Content-Type: application/json) breaking multipart parsing, not an app defect. Using requests.post(..., files=..., data=...) with only Authorization header resolved it."
+}

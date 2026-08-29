@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Add live location for dashboard weather and nearby mandi prices, request permission automatically and through a button, and save the detected location to the farmer profile."
+user_problem_statement: "Expand the Gemini scanner so vegetables, including karela, can be scanned to identify the disease, what is happening to the plant, likely causes, severity, and remedies."
 backend:
   - task: "Persist and use live GPS location"
     implemented: true
@@ -118,6 +118,40 @@ backend:
       - working: true
         agent: "testing"
         comment: "Iteration 7 backend regression passed 6/6 tests for authentication, validation, persistence, weather, and mandi location context."
+  - task: "Gemini-first chat and crop vision with GPT fallback"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Live authenticated chat and real JPEG crop scan both returned model_used=gemini-3-flash-preview; isolated invalid-Gemini test successfully fell back to gpt-5.4."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 8 passed 6/6 backend tests for Gemini chat/vision, history model persistence, fallback, and voice-chat contract."
+      - working: true
+        agent: "main"
+        comment: "Iteration 8 Romanized Hindi observation addressed with an explicit Devanagari prompt; live Hinglish-input test returned 496 Devanagari characters."
+  - task: "Vegetable disease diagnosis with optional plant hint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Real karela powdery-mildew PNG with plant_hint=करेला returned plant=करेला, category=सब्जी, correct disease, confidence, severity, 3 causes, 3 remedies, and Gemini model metadata."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 9 backend suite passed 12/12 across vegetable image validation, hinted/no-hint scan, history, Gemini chat, and voice contracts."
+      - working: true
+        agent: "main"
+        comment: "Inline numbered symptom/cause/remedy parsing hardened after QA observation; direct parser test and full 12-test suite passed."
 frontend:
   - task: "Automatic and manual live location dashboard flow"
     implemented: true
@@ -136,15 +170,46 @@ frontend:
       - working: true
         agent: "main"
         comment: "Post-QA explicit browser-context permission grant reproduced the active transition at 390x844; live location status and weather both rendered with no console errors."
+  - task: "Visible Gemini status in Chat, Scanner, and Settings"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/ChatScreen.tsx, /app/frontend/src/components/ScannerScreen.tsx, /app/frontend/src/components/SettingsScreen.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Mobile-web Playwright verified Gemini header/status, actual chat response badge, and persisted Gemini scanner result badge at 390x844."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 8 frontend passed Gemini chat/scanner/settings badges, confidence layout, navigation, regressions, and console checks."
+  - task: "Vegetable diagnosis detail card and plant hint input"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/ScannerScreen.tsx, /app/frontend/src/i18n.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "390x844 Playwright opened persisted karela scan and verified plant/category, disease, confidence, severity, and non-overlapping mobile layout."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 9 passed gallery upload, plant hint, full result fields, history detail, navigation, no overflow, and no console errors."
+      - working: true
+        agent: "main"
+        comment: "Removed stale useMemo pattern flagged by QA; TypeScript, Expo ESLint, and JavaScript lint all pass."
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 7
+  test_sequence: 9
   run_ui: true
 test_plan:
   current_focus:
-    - "Persist and use live GPS location"
-    - "Automatic and manual live location dashboard flow"
+    - "Vegetable disease diagnosis with optional plant hint"
+    - "Vegetable diagnosis detail card and plant hint input"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -155,3 +220,13 @@ agent_communication:
     message: "Iteration 7: backend 100%; frontend denial/fallback and profile flows pass. Granted permission was constrained by the testing runner."
   - agent: "main"
     message: "Granted permission path independently re-verified with explicit browser context; feature testing is complete."
+  - agent: "main"
+    message: "Gemini 3 Flash is now primary for text/voice answers and crop vision with GPT-5.4 fallback. Read /app/image_testing.md before testing scanner images. Validate real Gemini model_used responses, fallback behavior, model badges, persistence, and prior AI regressions."
+  - agent: "testing"
+    message: "Iteration 8 passed Gemini integration backend 6/6 and frontend 100%; only optional Devanagari consistency observation was noted."
+  - agent: "main"
+    message: "Vegetable scanning now returns plant/category, disease, severity, symptoms, causes and remedies, with optional plant_hint for karela-like ambiguous leaves. Read /app/image_testing.md and use a real vegetable disease image for iteration 9."
+  - agent: "testing"
+    message: "Iteration 9 passed backend 12/12 and frontend 100%; recommended hardening inline list parsing and AppContext memo dependencies."
+  - agent: "main"
+    message: "Both iteration-9 minor recommendations are fixed and self-verified; vegetable scanner testing is complete."

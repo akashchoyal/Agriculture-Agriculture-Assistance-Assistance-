@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import asyncio
 import logging
 import time
 import hashlib
@@ -107,32 +108,44 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     language: str
+    model_used: str
 
 
 class ScanRequest(BaseModel):
     image_base64: str = Field(min_length=20)
     mime_type: str = "image/jpeg"
     language: str = "hi"
+    plant_hint: str = Field(default="", max_length=100)
 
 
 class ScanResponse(BaseModel):
     scan_id: str
+    plant_name: str
+    plant_category: str
     diagnosis: str
     confidence: str
+    severity: str
     symptoms: List[str]
+    causes: List[str]
     remedies: List[str]
     language: str
+    model_used: str
 
 
 class ScanHistoryItem(BaseModel):
     scan_id: str
+    plant_name: str = ""
+    plant_category: str = ""
     diagnosis: str
     confidence: str
+    severity: str = ""
     symptoms: List[str]
+    causes: List[str] = Field(default_factory=list)
     remedies: List[str]
     image_base64: str
     language: str
     created_at: datetime
+    model_used: str = ""
 
 
 class WeatherDay(BaseModel):
@@ -226,26 +239,53 @@ async def current_user(authorization: Optional[str]) -> dict:
     return user
 
 
-async def ai_text(prompt: str, session_id: str, image_base64: Optional[str] = None) -> str:
+AI_MODELS = (
+    ("gemini", "gemini-3-flash-preview"),
+    ("openai", "gpt-5.4"),
+)
+
+
+async def ai_text(prompt: str, session_id: str, image_base64: Optional[str] = None) -> Tuple[str, str]:
     key = os.getenv("EMERGENT_LLM_KEY", "")
     if not key:
         raise HTTPException(status_code=503, detail="AI service is not configured")
-    chat = LlmChat(
-        api_key=key,
-        session_id=session_id,
-        system_message=(
-            "You are KrishiAI, a practical agriculture expert for Indian farmers. "
-            "Answer clearly and safely. Never claim certainty from a photo; advise a local agronomist for serious crop loss."
-        ),
-    ).with_model("openai", "gpt-5.4")
     contents = [ImageContent(image_base64=image_base64)] if image_base64 else None
-    response = ""
-    async for event in chat.stream_message(UserMessage(text=prompt, file_contents=contents)):
-        if isinstance(event, TextDelta):
-            response += event.content
-        elif isinstance(event, StreamDone):
-            break
-    return response.strip()
+    last_error: Optional[Exception] = None
+    for provider, model in AI_MODELS:
+        chat = LlmChat(
+            api_key=key,
+            session_id=f"{session_id}_{provider}",
+            system_message=(
+                "You are KrishiAI, a practical agriculture expert for Indian farmers. "
+                "Answer clearly and safely. Never claim certainty from a photo; advise a local agronomist for serious crop loss."
+            ),
+        ).with_model(provider, model)
+        response = ""
+        try:
+            async with asyncio.timeout(60):
+                async for event in chat.stream_message(UserMessage(text=prompt, file_contents=contents)):
+                    if isinstance(event, TextDelta):
+                        response += event.content
+                    elif isinstance(event, StreamDone):
+                        break
+            if response.strip():
+                return response.strip(), model
+            raise RuntimeError("AI returned an empty response")
+        except Exception as exc:
+            last_error = exc
+            logger.warning("AI model %s failed; trying fallback", model)
+    raise HTTPException(status_code=502, detail="AI service is temporarily unavailable") from last_error
+
+
+def parse_ai_list(value: str, fallback: List[str], limit: int = 3) -> List[str]:
+    normalized = re.sub(r"\s+(?=\d+[.)]\s+)", "\n", value.strip())
+    normalized = re.sub(r"\s+(?=[•]\s*)", "\n", normalized)
+    items = []
+    for part in normalized.splitlines():
+        cleaned = re.sub(r"^[-•\d.) ]+", "", part).strip()
+        if cleaned:
+            items.append(cleaned)
+    return items[:limit] or fallback
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
@@ -348,14 +388,18 @@ async def update_preferences(input: PreferencesUpdate, authorization: Optional[s
 async def chat(input: ChatRequest, authorization: Optional[str] = Header(default=None)):
     user = await current_user(authorization)
     lang = "Hindi" if input.language == "hi" else "English"
-    prompt = f"Reply in {lang}. Farmer question: {input.message}"
-    reply = await ai_text(prompt, f"chat_{user['user_id']}")
+    script_rule = "Write Hindi entirely in Devanagari script, not Romanized Hindi." if input.language == "hi" else ""
+    prompt = (
+        f"Reply in {lang}. Keep the answer practical and under 140 words unless the farmer asks for detail. "
+        f"Use plain text without markdown bold markers. {script_rule} Farmer question: {input.message}"
+    )
+    reply, model_used = await ai_text(prompt, f"chat_{user['user_id']}")
     now = datetime.now(timezone.utc)
     await db.chat_messages.insert_many([
         {"user_id": user["user_id"], "role": "user", "content": input.message, "created_at": now},
-        {"user_id": user["user_id"], "role": "assistant", "content": reply, "created_at": now},
+        {"user_id": user["user_id"], "role": "assistant", "content": reply, "created_at": now, "model_used": model_used},
     ])
-    return ChatResponse(reply=reply, language=input.language)
+    return ChatResponse(reply=reply, language=input.language, model_used=model_used)
 
 
 @api_router.post("/ai/scan", response_model=ScanResponse)
@@ -370,31 +414,53 @@ async def scan(input: ScanRequest, authorization: Optional[str] = Header(default
     if len(decoded) > 8_000_000:
         raise HTTPException(status_code=413, detail="Image is too large")
     lang = "Hindi" if input.language == "hi" else "English"
-    prompt = (
-        f"Reply in {lang} using exactly these headings: Diagnosis, Confidence, Symptoms, Remedies. "
-        "Analyze this crop photo conservatively. Give 2-3 symptoms and 3 practical remedies. "
-        "If uncertain, say so and recommend a local agronomist."
+    script_rule = "Write every value in Devanagari Hindi, never Romanized Hindi." if input.language == "hi" else "Write every value in English."
+    plant_hint = input.plant_hint.strip()
+    hint_rule = (
+        f"The farmer says the plant is '{plant_hint}'. Use this as a strong identification hint, but mention uncertainty if the image clearly conflicts. "
+        if plant_hint else "No plant name was supplied, so identify it conservatively from visible features. "
     )
-    result = await ai_text(prompt, f"scan_{user['user_id']}_{uuid.uuid4().hex[:8]}", raw)
+    prompt = (
+        f"Analyze this plant photo and reply in {lang} using exactly these English heading labels: "
+        "Plant, Category, Diagnosis, Confidence, Severity, Symptoms, Causes, Remedies. "
+        f"{script_rule} The plant can be a field crop, fruit, or vegetable, including Indian vegetables such as "
+        "bitter gourd (karela), bottle gourd, tomato, potato, onion, brinjal, okra, chilli, cabbage, cauliflower, peas, and leafy greens. "
+        f"{hint_rule}"
+        "Identify the likely plant first, then distinguish disease, pest damage, nutrient deficiency, or normal growth. "
+        "Category must be Vegetable, Field crop, Fruit, or Unknown. Severity must be Low, Medium, High, or Unknown, translated in the requested language. "
+        "Give 2-3 visible symptoms, 1-3 likely causes, and 3 practical integrated remedies. Include safe cultural or organic action first; "
+        "for chemicals, advise following the product label and local agriculture officer rather than inventing a dose. "
+        "If the image is unclear, say uncertain and request a closer photo instead of guessing."
+    )
+    result, model_used = await ai_text(prompt, f"scan_{user['user_id']}_{uuid.uuid4().hex[:8]}", raw)
     cleaned = re.sub(r"\*\*", "", result)
-    headings = list(re.finditer(r"(?im)^\s*(Diagnosis|Confidence|Symptoms|Remedies)\s*:?[ \t]*", cleaned))
+    headings = list(re.finditer(r"(?im)^\s*(Plant|Category|Diagnosis|Confidence|Severity|Symptoms|Causes|Remedies)\s*:?[ \t]*", cleaned))
     sections = {}
     for index, heading in enumerate(headings):
         end = headings[index + 1].start() if index + 1 < len(headings) else len(cleaned)
         sections[heading.group(1).lower()] = cleaned[heading.end():end].strip()
+    plant_name = " ".join(sections.get("plant", "").split())[:100] or ("अज्ञात पौधा" if input.language == "hi" else "Unknown plant")
+    plant_category = " ".join(sections.get("category", "").split())[:80] or ("अज्ञात" if input.language == "hi" else "Unknown")
     diagnosis = " ".join(sections.get("diagnosis", "").split())[:240] or result[:180]
     confidence = " ".join(sections.get("confidence", "Needs review").split())[:80]
-    symptoms = [re.sub(r"^[-•\d.) ]+", "", line).strip() for line in sections.get("symptoms", "").splitlines() if re.sub(r"^[-•\d.) ]+", "", line).strip()][:3] or ["Photo requires a closer field inspection"]
-    remedies = [re.sub(r"^[-•\d.) ]+", "", line).strip() for line in sections.get("remedies", "").splitlines() if re.sub(r"^[-•\d.) ]+", "", line).strip()][:3] or ["Remove visibly affected leaves", "Avoid overhead watering", "Consult a local agronomist"]
+    severity = " ".join(sections.get("severity", "Needs review").split())[:80]
+    symptoms = parse_ai_list(sections.get("symptoms", ""), ["Photo requires a closer field inspection"])
+    causes = parse_ai_list(sections.get("causes", ""), ["A closer field inspection is needed to confirm the cause"])
+    remedies = parse_ai_list(sections.get("remedies", ""), ["Remove visibly affected leaves", "Avoid overhead watering", "Consult a local agronomist"])
     scan_id = f"scan_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
     stored_image = input.image_base64 if input.image_base64.startswith("data:image/") else f"data:{input.mime_type};base64,{raw}"
     await db.scan_history.insert_one({
-        "scan_id": scan_id, "user_id": user["user_id"], "diagnosis": diagnosis, "confidence": confidence,
-        "symptoms": symptoms, "remedies": remedies, "image_base64": stored_image, "language": input.language,
-        "created_at": now, "deleted_at": None,
+        "scan_id": scan_id, "user_id": user["user_id"], "plant_name": plant_name, "plant_category": plant_category,
+        "diagnosis": diagnosis, "confidence": confidence, "severity": severity, "symptoms": symptoms, "causes": causes,
+        "remedies": remedies, "image_base64": stored_image, "language": input.language,
+        "model_used": model_used, "created_at": now, "deleted_at": None,
     })
-    return ScanResponse(scan_id=scan_id, diagnosis=diagnosis, confidence=confidence, symptoms=symptoms, remedies=remedies, language=input.language)
+    return ScanResponse(
+        scan_id=scan_id, plant_name=plant_name, plant_category=plant_category, diagnosis=diagnosis,
+        confidence=confidence, severity=severity, symptoms=symptoms, causes=causes, remedies=remedies,
+        language=input.language, model_used=model_used,
+    )
 
 
 @api_router.get("/scan/history", response_model=List[ScanHistoryItem])
@@ -744,6 +810,7 @@ class VoiceChatResponse(BaseModel):
     reply: str
     audio_url: str
     language: str
+    model_used: str
 
 
 @api_router.post("/ai/voice-chat", response_model=VoiceChatResponse)
@@ -782,17 +849,17 @@ async def voice_chat(
 
     lang_full = "Hindi" if lang_code == "hi" else "English"
     prompt = f"Reply in {lang_full}. Keep it under 90 words. Farmer question: {transcript}"
-    reply = await ai_text(prompt, f"voice_{user['user_id']}")
+    reply, model_used = await ai_text(prompt, f"voice_{user['user_id']}")
 
     now = datetime.now(timezone.utc)
     await db.chat_messages.insert_many([
         {"user_id": user["user_id"], "role": "user", "content": transcript, "created_at": now, "modality": "voice"},
-        {"user_id": user["user_id"], "role": "assistant", "content": reply, "created_at": now, "modality": "voice"},
+        {"user_id": user["user_id"], "role": "assistant", "content": reply, "created_at": now, "modality": "voice", "model_used": model_used},
     ])
 
     voice_name = "nova" if lang_code == "hi" else "alloy"
     audio_key = await _synthesize(reply, voice_name, lang_code)
-    return VoiceChatResponse(transcript=transcript, reply=reply, audio_url=f"/api/ai/voice/{audio_key}.mp3", language=lang_code)
+    return VoiceChatResponse(transcript=transcript, reply=reply, audio_url=f"/api/ai/voice/{audio_key}.mp3", language=lang_code, model_used=model_used)
 
 
 class TTSRequest(BaseModel):

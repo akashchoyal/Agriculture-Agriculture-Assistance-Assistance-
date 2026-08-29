@@ -7,9 +7,10 @@ import { useApp } from "@/src/context/AppContext";
 import { API_BASE, apiRequest } from "@/src/lib/api";
 import { useColors } from "@/src/components/common";
 
-type Message = { role: "user" | "assistant"; content: string; audioUrl?: string; modality?: "text" | "voice" };
+type Message = { role: "user" | "assistant"; content: string; audioUrl?: string; modality?: "text" | "voice"; modelUsed?: string };
 
 const asAbsolute = (path: string) => (path.startsWith("http") ? path : `${API_BASE.replace(/\/api$/, "")}${path}`);
+const modelLabel = (model?: string) => model?.includes("gemini") ? "Gemini 3 Flash" : model ? "GPT fallback" : "";
 
 export default function ChatScreen() {
   const { t, token, language } = useApp();
@@ -48,8 +49,8 @@ export default function ChatScreen() {
     const next: Message[] = [...messages, { role: "user", content: text.trim(), modality: "text" }];
     setMessages(next); setBusy(true);
     try {
-      const response = await apiRequest<{ reply: string }>("/ai/chat", { method: "POST", body: JSON.stringify({ message: text.trim(), language }) }, token);
-      setMessages([...next, { role: "assistant", content: response.reply, modality: "text" }]);
+      const response = await apiRequest<{ reply: string; model_used: string }>("/ai/chat", { method: "POST", body: JSON.stringify({ message: text.trim(), language }) }, token);
+      setMessages([...next, { role: "assistant", content: response.reply, modality: "text", modelUsed: response.model_used }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Message could not be sent");
     } finally { setBusy(false); }
@@ -106,7 +107,7 @@ export default function ChatScreen() {
       setMessages((prev) => [
         ...prev,
         { role: "user", content: transcript || "🎙️", modality: "voice" },
-        { role: "assistant", content: reply, audioUrl, modality: "voice" },
+        { role: "assistant", content: reply, audioUrl, modality: "voice", modelUsed: String(data.model_used || "") },
       ]);
       if (audioUrl) void playAudio(audioUrl);
     } catch (e) {
@@ -154,9 +155,9 @@ export default function ChatScreen() {
           <Text style={[styles.title, { color: c.text }]}>{t.chatTitle}</Text>
           <Text style={[styles.subtitle, { color: c.muted }]}>{t.chatSubtitle}</Text>
         </View>
-        <View style={styles.online}>
-          <View style={styles.onlineDot} />
-          <Text style={[styles.onlineText, { color: c.muted }]}>AI</Text>
+        <View testID="chat-model-status" style={[styles.modelStatus, { backgroundColor: c.brandSoft }]}>
+          <Ionicons name="sparkles" size={12} color={c.brand} />
+          <Text style={[styles.onlineText, { color: c.brand }]}>Gemini</Text>
         </View>
       </View>
 
@@ -194,6 +195,12 @@ export default function ChatScreen() {
                 </View>
               )}
               <Text style={{ color: isUser ? "#fff" : c.text, lineHeight: 20, fontSize: 14 }}>{message.content}</Text>
+              {!isUser && message.modelUsed && (
+                <View testID={`chat-model-${index}`} style={styles.messageModel}>
+                  <Ionicons name="sparkles-outline" size={11} color={c.muted} />
+                  <Text style={[styles.messageModelText, { color: c.muted }]}>{modelLabel(message.modelUsed)}</Text>
+                </View>
+              )}
               {!isUser && message.audioUrl && (
                 <Pressable
                   testID={`chat-play-${index}`}
@@ -270,8 +277,7 @@ const styles = StyleSheet.create({
   bot: { width: 47, height: 47, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 21, fontWeight: "800" },
   subtitle: { fontSize: 12, marginTop: 3 },
-  online: { flexDirection: "row", gap: 5, alignItems: "center" },
-  onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#588157" },
+  modelStatus: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: "row", gap: 4, alignItems: "center" },
   onlineText: { fontSize: 12, fontWeight: "800" },
   messages: { padding: 18, paddingBottom: 25, flexGrow: 1 },
   suggestions: { gap: 8, marginBottom: 18 },
@@ -284,6 +290,8 @@ const styles = StyleSheet.create({
   voiceBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   playBtn: { marginTop: 9, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   playText: { fontSize: 11, fontWeight: "800" },
+  messageModel: { marginTop: 8, flexDirection: "row", alignItems: "center", gap: 4 },
+  messageModelText: { fontSize: 10, fontWeight: "700" },
   typing: { alignSelf: "flex-start", padding: 11, borderRadius: 15, flexDirection: "row", gap: 8, alignItems: "center" },
   error: { fontSize: 12, marginTop: 4 },
   recordingBar: { marginHorizontal: 15, marginBottom: 6, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 8 },

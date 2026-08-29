@@ -1,0 +1,51 @@
+{
+  "summary": "Iteration 9 completed for vegetable scanner expansion and regressions. Backend pytest passed 12/12 across auth, JPEG/PNG/WEBP validation paths, real karela scan with hint, no-hint scan, scan history persistence/readability, Gemini chat and voice contracts. Mobile-web Playwright at 390x844 passed login, tabs, weather/mandi visibility, scanner gallery upload, plant hint submission, full result card fields, Gemini badge, history detail open, chat Devanagari response presence, settings Gemini status, and no horizontal overflow.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/ai/scan",
+        "issue": "Observed one flaky run in legacy test where AI returned numbered symptoms collapsed into one line (1 symptom parsed). Immediate retry passed; parser remains sensitive to model formatting style."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_vegetable_scan_iteration9.py",
+    "/app/backend/tests/test_gemini_iteration8.py",
+    "/app/test_reports/pytest/iteration9.xml",
+    "/app/test_reports/ui_iteration9/home_loaded.jpeg",
+    "/app/test_reports/ui_iteration9/final_state.jpeg",
+    "/root/.emergent/automation_output/20260829_072236/console_20260829_072236.log"
+  ],
+  "action_items": [
+    "Harden /api/ai/scan section parser to split inline numbered lists (e.g., '1. ... 2. ...') into separate symptoms/causes/remedies consistently.",
+    "Address frontend eslint warning in AppContext useMemo dependencies to prevent stale callbacks in future updates.",
+    "Optional maintainability: split /app/backend/server.py (>900 lines) into focused modules to reduce regression risk."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/server.py is very large (>900 lines), increasing coupling across auth/AI/weather/voice flows.",
+    "Scanner input validation correctly blocks invalid base64 and unsupported data URI mime prefixes for /api/ai/scan.",
+    "Frontend scanner testIDs coverage is strong for automation (plant hint, result card, history cards, model badge).",
+    "No MOCKED API flow detected during this run."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_vegetable_scan_iteration9.py",
+    "/app/test_reports/pytest/iteration9.xml",
+    "/app/test_reports/iteration_9.json"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12)",
+    "frontend": "100% (all requested iteration-9 mobile checks passed)"
+  },
+  "seed_data_creation": "Authenticated scanner tests created additional scan history entries for QA account using /tmp/karela_powdery_mildew.png.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Public preview URL used from frontend/.env (EXPO_PUBLIC_BACKEND_URL). Real karela PNG + plant_hint=करेला returned plant name/category/diagnosis/confidence/severity/symptoms/causes/remedies and Gemini model badge. No-hint flow also returned valid conservative output.",
+  "rca_of_issue": "Flaky symptom-count failure was reproduced once in legacy test and passed on retry. Root cause: model sometimes emits numbered items in a single paragraph; current parser primarily splits by lines, so inline numbering can collapse list count. Mitigation: add regex split on numbered/bullet patterns before truncation."
+}

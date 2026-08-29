@@ -18,6 +18,7 @@ export const copy = {
     recentScans: "Recent scans", noScans: "Your scan history will appear here", deleteScan: "Delete scan", viewScan: "View details", justNow: "Just now",
     today: "Today", tomorrow: "Tomorrow", rainChance: "rain", feelsHumid: "humidity", weatherError: "Weather unavailable", refresh: "Refresh",
     mandiPrices: "Mandi prices", mspLabel: "Govt MSP", liveLabel: "Live", perQuintal: "/quintal", mandiIntro: "Reference rates for your state",
+    voiceHold: "Hold to speak", voiceRelease: "Release to send", voiceRecording: "Listening…", voiceTranscribing: "Transcribing…", voicePermission: "Microphone permission is needed to talk with KrishiAI", voiceError: "Voice message could not be sent", play: "Play reply", stop: "Stop", listening: "Playing…",
   },
   hi: {
     appName: "KrishiAI", tagline: "आपका खेत। और समझदार।", welcome: "सुप्रभात", farmer: "किसान",
@@ -36,6 +37,7 @@ export const copy = {
     recentScans: "पिछले स्कैन", noScans: "आपकी स्कैन हिस्ट्री यहाँ दिखेगी", deleteScan: "स्कैन हटाएं", viewScan: "विवरण देखें", justNow: "अभी अभी",
     today: "आज", tomorrow: "कल", rainChance: "बारिश", feelsHumid: "नमी", weatherError: "मौसम की जानकारी नहीं मिली", refresh: "फिर से लोड करें",
     mandiPrices: "मंडी भाव", mspLabel: "सरकारी MSP", liveLabel: "लाइव", perQuintal: "/क्विंटल", mandiIntro: "आपके राज्य के लिए भाव",
+    voiceHold: "बोलने के लिए दबाएं", voiceRelease: "भेजने के लिए छोड़ें", voiceRecording: "सुन रहा हूँ…", voiceTranscribing: "समझ रहा हूँ…", voicePermission: "बात करने के लिए माइक की अनुमति चाहिए", voiceError: "आवाज़ नहीं भेजी जा सकी", play: "जवाब सुनें", stop: "रोकें", listening: "बज रहा है…",
   },
 } as const;
 

@@ -1,10 +1,12 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Header, UploadFile, File, Form
+from fastapi.responses import Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import time
+import hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Tuple, Dict
@@ -15,6 +17,7 @@ from datetime import datetime, timezone, timedelta
 import bcrypt
 import httpx
 from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent, TextDelta, StreamDone
+from emergentintegrations.llm.openai import OpenAISpeechToText, OpenAITextToSpeech
 
 
 ROOT_DIR = Path(__file__).parent
@@ -582,6 +585,153 @@ async def mandi(authorization: Optional[str] = Header(default=None)):
         payload = {"state": state, "source": "msp", "updated_at": datetime.now(timezone.utc), "items": items}
     _mandi_cache[cache_key] = (now + 1800, payload)
     return MandiResponse(**payload)
+
+
+# ---------------- Voice Chat (Whisper + TTS) ----------------
+_stt_client: Optional[OpenAISpeechToText] = None
+_tts_client: Optional[OpenAITextToSpeech] = None
+_tts_cache: Dict[str, Tuple[float, bytes]] = {}  # key -> (expires_at, mp3 bytes)
+_TTS_CACHE_TTL = 60 * 60  # 1 hour
+STT_ALLOWED = {
+    "audio/mp4": ".m4a", "audio/m4a": ".m4a", "audio/x-m4a": ".m4a",
+    "audio/aac": ".aac", "audio/wav": ".wav", "audio/x-wav": ".wav",
+    "audio/mpeg": ".mp3", "audio/mp3": ".mp3", "audio/webm": ".webm",
+    "video/mp4": ".mp4", "video/webm": ".webm",
+}
+STT_MAX_BYTES = 20 * 1024 * 1024
+
+
+def _get_stt() -> OpenAISpeechToText:
+    global _stt_client
+    if _stt_client is None:
+        key = os.getenv("EMERGENT_LLM_KEY", "")
+        if not key:
+            raise HTTPException(status_code=503, detail="AI service is not configured")
+        _stt_client = OpenAISpeechToText(api_key=key)
+    return _stt_client
+
+
+def _get_tts() -> OpenAITextToSpeech:
+    global _tts_client
+    if _tts_client is None:
+        key = os.getenv("EMERGENT_LLM_KEY", "")
+        if not key:
+            raise HTTPException(status_code=503, detail="AI service is not configured")
+        _tts_client = OpenAITextToSpeech(api_key=key)
+    return _tts_client
+
+
+def _clean_for_tts(text: str) -> str:
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"`{1,3}[^`]*`{1,3}", "", text)
+    text = re.sub(r"[*_#>~|]", "", text)
+    return re.sub(r"\s+", " ", text).strip()[:4000]
+
+
+async def _synthesize(text: str, voice: str, language: str) -> str:
+    cleaned = _clean_for_tts(text)
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Empty text for speech")
+    key = hashlib.sha256(f"{cleaned}|{voice}|tts-1|mp3".encode()).hexdigest()[:24]
+    now = time.time()
+    cached = _tts_cache.get(key)
+    if not cached or cached[0] <= now:
+        try:
+            audio_bytes = await _get_tts().generate_speech(text=cleaned, model="tts-1", voice=voice, response_format="mp3")
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail="Speech synthesis failed") from exc
+        _tts_cache[key] = (now + _TTS_CACHE_TTL, audio_bytes)
+        # Housekeeping: purge expired entries so memory stays flat
+        expired = [entry_key for entry_key, (exp, _) in _tts_cache.items() if exp <= now]
+        for entry_key in expired:
+            _tts_cache.pop(entry_key, None)
+    return key
+
+
+class VoiceChatResponse(BaseModel):
+    transcript: str
+    reply: str
+    audio_url: str
+    language: str
+
+
+@api_router.post("/ai/voice-chat", response_model=VoiceChatResponse)
+async def voice_chat(
+    audio: UploadFile = File(...),
+    language: Optional[str] = Form(default=None),
+    authorization: Optional[str] = Header(default=None),
+):
+    user = await current_user(authorization)
+    lang_code = (language or user.get("language") or "hi").strip().lower()
+    if lang_code not in ("hi", "en"):
+        lang_code = "hi"
+    suffix = STT_ALLOWED.get((audio.content_type or "").lower())
+    if not suffix:
+        raise HTTPException(status_code=415, detail="Use m4a/mp4/aac/wav/mp3/webm audio")
+    data = await audio.read(STT_MAX_BYTES + 1)
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty audio recording")
+    if len(data) > STT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Recording must be under 20 MB")
+
+    try:
+        # OpenAI SDK requires bytes/IOBase/PathLike/tuple — pass a tuple with real bytes.
+        file_arg = (f"recording{suffix}", data, audio.content_type or "application/octet-stream")
+        transcription = await _get_stt().transcribe(file=file_arg, model="whisper-1", language=lang_code)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Could not transcribe your voice, please try again") from exc
+
+    transcript = ""
+    if isinstance(transcription, dict):
+        transcript = str(transcription.get("text", "")).strip()
+    else:
+        transcript = str(getattr(transcription, "text", "") or transcription).strip()
+    if not transcript:
+        raise HTTPException(status_code=422, detail="No speech detected — please try recording again")
+
+    lang_full = "Hindi" if lang_code == "hi" else "English"
+    prompt = f"Reply in {lang_full}. Keep it under 90 words. Farmer question: {transcript}"
+    reply = await ai_text(prompt, f"voice_{user['user_id']}")
+
+    now = datetime.now(timezone.utc)
+    await db.chat_messages.insert_many([
+        {"user_id": user["user_id"], "role": "user", "content": transcript, "created_at": now, "modality": "voice"},
+        {"user_id": user["user_id"], "role": "assistant", "content": reply, "created_at": now, "modality": "voice"},
+    ])
+
+    voice_name = "nova" if lang_code == "hi" else "alloy"
+    audio_key = await _synthesize(reply, voice_name, lang_code)
+    return VoiceChatResponse(transcript=transcript, reply=reply, audio_url=f"/api/ai/voice/{audio_key}.mp3", language=lang_code)
+
+
+class TTSRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=3000)
+    language: str = "hi"
+
+
+class TTSResponse(BaseModel):
+    audio_url: str
+
+
+@api_router.post("/ai/tts", response_model=TTSResponse)
+async def tts(input: TTSRequest, authorization: Optional[str] = Header(default=None)):
+    await current_user(authorization)
+    lang_code = input.language if input.language in ("hi", "en") else "hi"
+    voice_name = "nova" if lang_code == "hi" else "alloy"
+    audio_key = await _synthesize(input.text, voice_name, lang_code)
+    return TTSResponse(audio_url=f"/api/ai/voice/{audio_key}.mp3")
+
+
+@api_router.get("/ai/voice/{key}.mp3")
+async def voice_audio(key: str):
+    entry = _tts_cache.get(key)
+    if not entry or entry[0] <= time.time():
+        raise HTTPException(status_code=404, detail="Audio expired, please regenerate")
+    return Response(
+        content=entry[1],
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 @api_router.post("/status", response_model=StatusCheck)

@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 6 — Voice Chat (Whisper STT + OpenAI TTS via emergentintegrations) validated end-to-end. Backend: 18/18 pytest tests PASS after fixing an integration bug where OpenAISpeechToText.transcribe was called with file=<str path>; the OpenAI SDK rejects that with 'Expected entry at `file` to be bytes, an io.IOBase instance, PathLike or a tuple'. Fixed in /app/backend/server.py by passing file=(name, bytes, content_type) tuple. Covered: /api/ai/voice-chat happy path (200 with non-empty transcript, reply, audio_url starting /api/ai/voice/, language), 401 without Bearer, 415 for text/plain, 400 for empty audio, 413 for >20 MB; /api/ai/tts 200+cache (same text+language → identical audio_url), 401 without token, 422 for empty text, Hindi voice=nova path; GET /api/ai/voice/{key}.mp3 returns Content-Type audio/mpeg with non-empty bytes; chat_messages persistence verified in MongoDB — both role=user (transcript) and role=assistant (reply) rows written with modality='voice'. Regression: /auth/login, /auth/me, /ai/chat, /ai/scan (schema), /scan/history, /weather, /mandi, PATCH /profile all still 200. Frontend (390x844 mobile) logged in as qa@krishiai.app: on Chat tab chat-mic renders BEFORE chat-input in the composer, chat-send + chat-suggestion chips visible, initial assistant greeting is Hindi and contains 'माइक' as required, typed regression 'name one wheat fertilizer' produced a Hindi AI reply bubble, tapping chat-mic activated voice-recording-indicator (Chromium web sandbox auto-granted mic permission so recording started; no red screen, no chat-error). chat-play-* and voice-recording-indicator both only render when applicable, matching the spec.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Chat", "issues": ["Text assistant replies still contain raw markdown (e.g. '**यूरिया**') because /ai/chat does not strip markdown before returning. Pre-existing, not related to voice chat, but worth cleaning up for parity with the TTS path which does strip markdown."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_voice_chat.py",
+    "/app/test_reports/pytest/iteration6.xml",
+    "/app/test_reports/ui_iteration6_chat.jpeg"
+  ],
+  "action_items": [
+    "OPTIONAL: strip markdown in /ai/chat reply the same way _clean_for_tts does, so typed replies don't show raw ** in bubbles.",
+    "OPTIONAL: server.py still creates a NamedTemporaryFile for STT but no longer needs it (bytes are passed directly). Safe to remove tempfile + os.unlink dance to reduce disk IO."
+  ],
+  "critical_code_review_comments": [
+    "server.py: OpenAISpeechToText.transcribe requires a file-like/bytes/tuple argument — passing a string path silently fails at OpenAI SDK layer and surfaces as generic 502 'Could not transcribe'. Fixed by passing (filename, bytes, content_type) tuple. Reference: /app/backend/server.py:682-685.",
+    "TTS cache key hashes text+voice+model+format (24-hex chars) and the endpoint /api/ai/voice/{key}.mp3 rejects with 404 once TTL of 1h expires — correct expiry semantics; cache hit round-trip verified (same audio_url returned on repeat).",
+    "voice_chat endpoint validates content_type against STT_ALLOWED whitelist (m4a/mp4/aac/wav/mp3/webm) → 415, empty file → 400, >20MB streamed via read(limit+1) → 413, no session token → 401, no speech detected → 422. All boundary codes verified.",
+    "chat_messages inserted with modality='voice' for BOTH user and assistant rows in a single insert_many so bookkeeping is atomic per voice turn.",
+    "ChatScreen.tsx builds FormData differently for web (blob) vs native (uri object) which correctly matches the STT_ALLOWED audio/webm | audio/mp4 | audio/wav content types the backend expects.",
+    "expo-audio (new API) is used correctly — no deprecated expo-av import remains anywhere in the frontend."
+  ],
+  "updated_files": [
+    "/app/backend/server.py",
+    "/app/backend/tests/test_voice_chat.py",
+    "/app/test_reports/pytest/iteration6.xml",
+    "/app/test_reports/iteration_6.json"
+  ],
+  "success_rate": {"backend": "100% (18/18)", "frontend": "100% (all iteration-6 acceptance criteria met)"},
+  "seed_data_creation": "Regression patch set QA profile.address='TEST_iter6_voice'; two voice chat_messages rows (role user + assistant, modality=voice) written for QA user. All prefixed TEST_ or clearly test-scoped.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "QA user: qa@krishiai.app / KrishiAI123!. Voice chat is now working after fix to OpenAISpeechToText.transcribe call — bytes tuple, not path string. TTS in-memory cache is per-process (60m TTL) and keyed by sha256(text|voice|model|format)[:24]; restarting backend invalidates cached audio_urls. Chromium web preview auto-grants microphone permission, so voice-recording-indicator will appear when chat-mic is tapped without user gesture; on real devices with denied permission the chat-error path is exercised instead. Do NOT use pytest ini's default xdist for voice tests that share state (TTS cache lookup); run with -n 0. AuthScreen testIDs are auth-email / auth-password / auth-submit (not login-*).",
+  "rca_of_issue": "Root cause of /ai/voice-chat 502s: The emergentintegrations OpenAISpeechToText.transcribe wraps litellm.atranscription which forwards to the OpenAI Python SDK. The SDK's Files API requires the `file` argument to be one of {bytes, io.IOBase, PathLike, tuple} — a plain str is explicitly rejected with 'Expected entry at `file` to be bytes...'. Because emergentintegrations wraps the underlying error as a generic Exception, our voice_chat handler mapped it to HTTP 502 'Could not transcribe your voice'. Repro: call OpenAISpeechToText.transcribe(file='/tmp/x.mp3') → APIConnectionError. Fix: pass file=(name, bytes, content_type) tuple constructed from the multipart upload's raw bytes. Verified end-to-end by TTS-round-tripping an English wheat question through /ai/tts → mp3 → /ai/voice-chat → 200 with real Whisper transcript and gpt-5.4 reply, and by chat_messages MongoDB inspection confirming both modality=voice rows are persisted."
+}

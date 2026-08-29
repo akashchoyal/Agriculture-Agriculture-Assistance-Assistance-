@@ -11,12 +11,17 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Scan crops and add profile photos"
+        "NSCameraUsageDescription": "Scan crops and add profile photos",
+        "NSMicrophoneUsageDescription": "Speak questions to your AI farm assistant"
       },
       "bundleIdentifier": "com.emergent.agriaiassistant.bcebcx"
     },
     "android": {
-      "permissions": ["CAMERA", "READ_MEDIA_IMAGES"],
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -39,7 +44,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

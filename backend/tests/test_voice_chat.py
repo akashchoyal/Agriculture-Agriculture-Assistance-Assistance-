@@ -10,7 +10,7 @@ import requests
 from motor.motor_asyncio import AsyncIOMotorClient
 import asyncio
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://krishismart-app.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://krishiai-preview-2.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 QA_EMAIL = "qa@krishiai.app"
 QA_PASSWORD = "KrishiAI123!"
